@@ -1,0 +1,24 @@
+name: Weekly FDA label refresh
+on:
+  schedule:
+    - cron: "17 19 * * 0"   # Sundays, 19:17 UTC
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Refresh labels.json from openFDA
+        run: python scripts/refresh_labels.py
+      - name: Commit if anything changed
+        run: |
+          git config user.name "label-refresh-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add labels.json
+          git diff --cached --quiet || git commit -m "Weekly FDA label refresh"
+          git push
