@@ -377,8 +377,6 @@ const REFS = [
 (function hourglass(){
   const T=document.getElementById("hgT"), B=document.getElementById("hgB"), S=document.getElementById("hgS");
   if(!T||!B||!S) return;
-  let still=false; try{ still = matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
-  if(still){ T.setAttribute("y","38"); B.setAttribute("y","74"); return; }
   const M=T.closest("svg"), t0=performance.now(), FLOW=6000, FLIP=900;
   M.style.transformOrigin="50% 50%";
   (function tick(now){
@@ -811,7 +809,29 @@ async function loadStatic(){
     if(l){ live.labels = l.labels||{}; live.meta = {lastRun:l.lastRun, changes:l.changes||[]}; live.ready = true; }
     if(c){ live.bank = (c.cases||[]).filter(x=>x.status==="approved"); pickActive(); }
     if(l||c) render();
+    refreshFromFDA();
   }catch(e){}
+}
+async function refreshFromFDA(){
+  // Live check of the FDA's public label database (openFDA) by DailyMed set ID; keeps saved data if unreachable.
+  const pretty = s => { const m=/^(\d{4})(\d{2})(\d{2})$/.exec(s||""); return m ? new Date(+m[1],+m[2]-1,+m[3]).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"}) : s; };
+  const first = (s,n=110) => { s=(s||"").replace(/\s+/g," ").replace(/^WARNING:?\s*/i,"").trim(); return s.length<=n ? s : s.slice(0,n).replace(/\s+\S*$/,""); };
+  let changed = false;
+  await Promise.all(DRUGS.map(async d=>{
+    try{
+      const r = await fetch(`https://api.fda.gov/drug/label.json?search=set_id:%22${d.setid}%22&limit=1`);
+      if(!r.ok) return;
+      const rec = ((await r.json()).results||[])[0]; if(!rec) return;
+      const L = live.labels[d.id] = Object.assign({setid:d.setid, title:d.name}, live.labels[d.id]||{});
+      const boxedText = (rec.boxed_warning||[]).join(" ");
+      if(rec.effective_time) L.updated = pretty(rec.effective_time);
+      L.boxed = !!boxedText.trim(); if(L.boxed) L.boxedQuote = first(boxedText);
+      if(!L.indicationQuote && rec.indications_and_usage) L.indicationQuote = first(rec.indications_and_usage.join(" "));
+      L.retrievedAt = new Date().toISOString(); L.source = "openFDA (live)";
+      changed = true;
+    }catch(e){}
+  }));
+  if(changed){ live.ready = true; if(state.mode==="drugs") render(); }
 }
 (async function initLive(){
   if(!window.claude || !claude.use){ loadStatic(); return; }
@@ -862,7 +882,7 @@ function renderDrugs(){
         <div class="eyebrow">Official FDA label · DailyMed (National Library of Medicine)</div>
         ${label}
         <p><a href="${labelUrl(sel.setid)}" target="_blank" rel="noopener">Open the full prescribing information</a></p>
-        <p class="disclaimer">Retrieved automatically from DailyMed and refreshed weekly. Verify against the current full prescribing information and local guidance before clinical use. Doses are intentionally omitted.</p>
+        <p class="disclaimer">Retrieved automatically from the FDA (DailyMed / openFDA) and checked each time this page opens. Verify against the current full prescribing information and local guidance before clinical use. Doses are intentionally omitted.</p>
       </section>
     </article>
   </section>`;
