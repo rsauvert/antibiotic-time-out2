@@ -1,0 +1,1218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>:root{color-scheme:light}html,body{margin:0}body{font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Antibiotic Time-Out</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single case at a time, like a bedside chart beside an order decision. Chart panel left, decision right; stacks on phones. A four-step rail tracks the AHRQ Four Moments. */
+:root{
+  --bg:#F3F5F7;
+  --surface:#FFFFFF;
+  --ink:#16243A;
+  --muted:#5B6878;
+  --line:#D9DEE5;
+  --accent:#1C6496;      /* surgical blue */
+  --accent-soft:#E2EDF6;
+  --sand:#A8640F;
+  --good:#1F7A4D; --good-soft:#E3F2EA;
+  --bad:#B23A32;  --bad-soft:#F8E6E4;
+  --band:#E9EDF2;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E141C;--surface:#16202C;--ink:#E3E8EE;--muted:#9AA6B4;--line:#2A3646;
+  --accent:#6DB3E3;--accent-soft:#12293A;--sand:#E6A651;--good:#5CC48E;--good-soft:#14301F;--bad:#F08A80;--bad-soft:#3A1A17;--band:#1C2836;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E141C;--surface:#16202C;--ink:#E3E8EE;--muted:#9AA6B4;--line:#2A3646;
+  --accent:#6DB3E3;--accent-soft:#12293A;--sand:#E6A651;--good:#5CC48E;--good-soft:#14301F;--bad:#F08A80;--bad-soft:#3A1A17;--band:#1C2836;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--f-display);font-stretch:85%;line-height:1.1;margin:0;text-wrap:balance}
+p{margin:0}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* header */
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 24px;border-bottom:2px solid var(--ink);padding-bottom:14px}
+header h1{font-size:clamp(30px,5vw,46px);font-weight:800}
+header .by{font-size:13px;color:var(--muted);text-align:right}
+.score{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.score b{color:var(--ink);font-size:18px}
+
+/* rail */
+.rail{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.step{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-top:4px solid var(--line);background:transparent;border-left:0;border-right:0;border-bottom:0;text-align:left;cursor:pointer;min-width:0}
+.step .n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.step .t{font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:15px;line-height:1.2}
+.step[aria-current="step"]{border-top-color:var(--accent)}
+.step.done{border-top-color:var(--ink)}
+.step.done .n::after{content:" ✓"}
+.step:disabled{cursor:default;opacity:.55}
+@media (max-width:620px){.step .t{font-size:13px}.step{padding:8px 6px}}
+
+/* intro / summary */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px clamp(18px,4vw,36px);display:flex;flex-direction:column;gap:16px}
+.lede{font-size:18px;max-width:64ch}
+.moments{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:4px 0}
+.moment{border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:4px;background:var(--bg)}
+.moment .q{font-weight:700}
+.moment .s{font-size:14px;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px;color:var(--muted)}
+.btn{background:var(--ink);color:var(--surface);border:0;border-radius:8px;padding:12px 20px;font-weight:700;cursor:pointer;align-self:flex-start}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+
+/* case */
+.case{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start}
+@media (max-width:820px){.case{grid-template-columns:1fr}}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.wristband{background:var(--band);padding:14px 16px;display:flex;flex-direction:column;gap:2px;border-bottom:1px solid var(--line)}
+.wristband .who{font-family:var(--f-display);font-stretch:85%;font-weight:700;font-size:20px}
+.wristband .where{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.chart-body{padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.story{font-size:15px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;margin:0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.kv dd.flag{color:var(--bad);font-weight:600}
+.sub{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:4px}
+.meds{list-style:none;margin:0;padding:0;font-family:var(--f-mono);font-size:13px;display:flex;flex-direction:column;gap:3px}
+
+.decide{display:flex;flex-direction:column;gap:14px;min-width:0}
+.role{display:inline-flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.decide h2{font-size:clamp(22px,3vw,28px);font-weight:700}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt .letter{font-family:var(--f-mono);font-weight:600;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);font-size:13px}
+.opt .body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.opt .why{font-size:14px;color:var(--muted)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--good);background:var(--good-soft)}
+.opt.right .letter{background:var(--good);border-color:var(--good);color:var(--surface)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt.wrong .letter{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.opt.dim{opacity:.72}
+.verdict{font-weight:700}
+.verdict.good{color:var(--good)}.verdict.bad{color:var(--bad)}
+.pearl{border-left:4px solid var(--accent);background:var(--surface);padding:14px 16px;border-radius:0 10px 10px 0;display:flex;flex-direction:column;gap:6px}
+.pearl .eyebrow{color:var(--accent)}
+.pearl p{font-size:15px}
+.ev{font-size:13px;color:var(--muted)}
+.ev a{color:var(--muted)}
+
+/* summary */
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.res{border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.res .k{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.res .ok{color:var(--good);font-weight:700}.res .no{color:var(--bad);font-weight:700}
+.big{font-family:var(--f-display);font-stretch:80%;font-size:56px;font-weight:800;line-height:1}
+ol.refs{margin:0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+ol.refs a{color:var(--ink)}
+footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+/* mode switch */
+.modes{display:inline-flex;flex-wrap:wrap;border:1.5px solid var(--ink);border-radius:10px;overflow:hidden;align-self:flex-start}
+.modes button{background:transparent;border:0;padding:9px 16px;font-weight:700;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+
+/* body map explorer */
+.timeline{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.tl{border-top:4px solid var(--line);padding:8px 6px 0;font-family:var(--f-mono);font-size:12px;color:var(--muted);min-width:0}
+.tl b{display:block;color:var(--ink);font-family:var(--f-display);font-stretch:85%;font-size:14px;line-height:1.2}
+.tl.cur{border-top-color:var(--accent)}
+.tl.done{border-top-color:var(--ink)}
+@media (max-width:620px){.tl b{font-size:12px}.tl{font-size:10px;padding-inline:2px}}
+.explorer{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:18px;align-items:start}
+@media (max-width:820px){.explorer{grid-template-columns:1fr}}
+.bodycard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.bodymap{width:100%;max-width:300px;height:auto;align-self:center;display:block}
+.bodymap .lbl{fill:var(--muted);font:600 11px var(--f-mono)}
+.comp{cursor:pointer;outline:none}
+.comp .shape{fill:var(--band);stroke:var(--muted);stroke-width:1.5;transition:fill .3s,stroke .3s}
+.comp.skin .shape{fill:url(#bodyshade);stroke:var(--muted);stroke-width:1.4;stroke-opacity:.7}
+.comp .detail{fill:none;stroke:var(--muted);stroke-width:1;opacity:.55;pointer-events:none}
+.comp.tube .shape,.comp.vessel .shape{fill:none;stroke-width:2.5;stroke:var(--muted);stroke-linecap:round;opacity:.75}
+.comp.vessel .shape.vein{stroke-dasharray:1 4;stroke-width:3}
+.comp .hit{fill:none;stroke:transparent;stroke-width:12;pointer-events:stroke}
+.comp.vessel .hit{stroke-width:7}
+.comp:hover .shape{stroke:var(--ink)}
+.comp.infected .shape{fill:var(--bad-soft);stroke:var(--bad);stroke-width:2.5;animation:pulse 1.8s ease-in-out infinite}
+.comp.risk .shape{stroke:var(--accent);stroke-dasharray:5 3;stroke-width:2.5}
+.comp.cleared .shape{fill:var(--good-soft);stroke:var(--good);stroke-width:2.5}
+.comp.tube.infected .shape,.comp.vessel.infected .shape,.comp.tube.cleared .shape,.comp.vessel.cleared .shape{fill:none}
+.comp.tube.infected .shape,.comp.vessel.infected .shape,.comp.tube.cleared .shape,.comp.vessel.cleared .shape,.comp.tube.risk .shape,.comp.vessel.risk .shape{stroke-width:3.5;opacity:1}
+.comp.selected .shape{stroke-width:3.5}
+.comp:focus-visible .shape{stroke:var(--accent);stroke-width:4}
+@keyframes pulse{50%{opacity:.55}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:4px;border:2px solid var(--muted);background:var(--band);display:inline-block}
+.sw.inf{border-color:var(--bad);background:var(--bad-soft)}
+.sw.risk{border-color:var(--accent);border-style:dashed;background:transparent}
+.sw.ok{border-color:var(--good);background:var(--good-soft)}
+.compinfo{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.compinfo h3{font-size:18px}
+.compinfo p{font-size:14.5px}
+.state-tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.state-tag.infected{color:var(--bad)}.state-tag.risk{color:var(--accent)}.state-tag.cleared{color:var(--good)}.state-tag.none{color:var(--muted)}
+.hint{font-size:12.5px;color:var(--muted)}
+.path{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-width:72ch}
+.path li{display:grid;grid-template-columns:96px 1fr;gap:12px;font-size:15px}
+.path .d{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding-top:2px}
+/* antibiotic reference */
+.drugs{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,8fr);gap:18px;align-items:start}
+@media (max-width:820px){.drugs{grid-template-columns:1fr}}
+.druglist{display:flex;flex-direction:column;gap:6px}
+@media (max-width:820px){.druglist{flex-direction:row;overflow-x:auto;padding-bottom:4px}.drugbtn{flex:0 0 auto}}
+.drugbtn{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer}
+.drugbtn span{font-size:12.5px;color:var(--muted)}
+.drugbtn .bw{color:var(--bad);font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.drugbtn[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 4px 0 0 var(--accent)}
+.drugcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px clamp(16px,3vw,28px);display:flex;flex-direction:column;gap:16px;min-width:0}
+.dhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px}
+.dhead h2{font-size:clamp(26px,3.4vw,34px);font-weight:800}
+.status{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding:4px 9px;border-radius:99px}
+.status.draft{background:var(--accent-soft);color:var(--accent)}
+.status.ok{background:var(--good-soft);color:var(--good)}
+.labelbox{border-top:2px solid var(--ink);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.labelbox a{color:var(--ink);font-weight:700}
+.boxed{border:2px solid var(--bad);background:var(--bad-soft);border-radius:6px;padding:10px 12px;font-size:14.5px}
+.quote{font-style:italic;color:var(--muted);font-size:14.5px}
+.wl{margin:6px 0 0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:3px}
+details summary{cursor:pointer;font-weight:700;font-size:14.5px}
+.disclaimer{font-size:12.5px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
+.okline{color:var(--good)}
+/* brand mark */
+h1.title{display:flex;align-items:center;gap:.3em;flex-wrap:wrap}
+h1.title .mark{width:.95em;height:.95em;flex:none}
+/* tracks */
+.tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.track{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px;text-align:left;cursor:pointer;transition:border-color .15s}
+.track:hover{border-color:var(--ink)}
+.track h2{font-size:clamp(24px,3vw,30px);font-weight:800}
+.track ul{margin:0;padding-left:18px;font-size:15px;display:flex;flex-direction:column;gap:4px}
+.track .go{font-weight:700;margin-top:auto}
+.badge{align-self:flex-start;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1.5px solid var(--accent);color:var(--accent);font-weight:600}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:13px}
+.cmebar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cs{border:0;border-top:4px solid var(--line);background:transparent;padding:8px 4px 0;text-align:left;font-family:var(--f-mono);font-size:11px;color:var(--muted);cursor:pointer;min-width:0}
+.cs b{display:block;font-family:var(--f-display);font-stretch:85%;font-size:14px;color:var(--ink);line-height:1.2}
+.cs.cur{border-top-color:var(--accent)}.cs.done{border-top-color:var(--ink)}
+.cs:disabled{opacity:.5;cursor:default}
+@media (max-width:620px){.cs b{font-size:11px}.cs .n{display:none}}
+.fm{display:grid;grid-template-columns:190px 1fr;gap:10px 20px;margin:0}
+.fm dt{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.fm dd{margin:0}
+.fm ol,.fm ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+@media (max-width:620px){.fm{grid-template-columns:1fr;gap:4px}.fm dt{margin-top:10px}}
+.pending{background:var(--accent-soft);border:1.5px dashed var(--accent);border-radius:8px;padding:12px 14px;font-size:14.5px}
+.ph{background:var(--accent-soft);color:var(--accent);padding:0 5px;border-radius:4px;font-family:var(--f-mono);font-size:.88em}
+.qlist{display:flex;flex-direction:column;gap:12px}
+.qcard{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--surface);display:flex;flex-direction:column;gap:8px}
+.q{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:4px;min-width:0}
+.q legend{font-weight:700;padding:0;margin-bottom:6px}
+.choice{display:flex;gap:10px;align-items:flex-start;padding:7px 10px;border-radius:8px;cursor:pointer}
+.choice:hover{background:var(--bg)}
+.choice input{margin-top:5px;accent-color:var(--accent);flex:none}
+.choice.correct{background:var(--good-soft)}.choice.incorrect{background:var(--bad-soft)}
+.qcard .why{font-size:14px;color:var(--muted)}
+.lk{display:flex;flex-wrap:wrap;gap:6px}
+.lk label{border:1.5px solid var(--line);border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.lk input{accent-color:var(--accent)}
+textarea{width:100%;min-height:96px;font:inherit;padding:10px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.tally{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums;margin:0}
+.tally dt{color:var(--muted)}.tally dd{margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Hospital antibiotic stewardship · physicians &amp; nurses</div>
+      <h1 class="title">Antibiotic Time-Out <svg class="mark" role="img" aria-label="Hourglass" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+ <defs><clipPath id="hgTop"><rect id="hgT" x="0" y="30" width="100" height="30"></rect></clipPath>
+ <clipPath id="hgBot"><rect id="hgB" x="0" y="82" width="100" height="30"></rect></clipPath></defs>
+ <path d="M35 30 L65 30 C63 40 52 46 50 49 C48 46 37 40 35 30 Z" style="fill:var(--sand)" clip-path="url(#hgTop)"/>
+ <path d="M33 83 C37 71 46 67 50 67 C54 67 63 71 67 83 Z" style="fill:var(--sand)" clip-path="url(#hgBot)"/>
+ <line id="hgS" x1="50" y1="49" x2="50" y2="82" style="stroke:var(--sand)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="2.5 3.5"></line>
+ <path d="M31 15 C31 38 46 43 46 50 C46 57 31 62 31 85 M69 15 C69 38 54 43 54 50 C54 57 69 62 69 85" style="stroke:var(--ink)" fill="none" stroke-width="5" stroke-linecap="round"/>
+ <rect x="22" y="8" width="56" height="8" rx="3" style="fill:var(--ink)"/><rect x="22" y="84" width="56" height="8" rx="3" style="fill:var(--ink)"/></svg></h1>
+    </div>
+    <div class="by">
+      <div class="score" id="score" aria-live="polite">Score <b>0</b> / 4</div>
+      <div>Designed by Rodolfo J. Salas-Auvert, M.D.</div>
+      <button class="linkbtn" id="changetrack" data-track="" hidden>Switch track</button>
+    </div>
+  </header>
+
+  <nav class="cmebar" id="cmebar" aria-label="CME activity steps" hidden></nav>
+
+  <div class="modes" id="modes" role="group" aria-label="Choose a format">
+    <button id="mode-cases" data-mode="cases" aria-pressed="true">Case review</button>
+    <button id="mode-explorer" data-mode="explorer" aria-pressed="false">Body map explorer</button>
+    <button id="mode-drugs" data-mode="drugs" aria-pressed="false">Antibiotic reference</button>
+    <button id="mode-review" data-mode="review" aria-pressed="false" hidden>Review queue</button>
+  </div>
+
+  <nav class="rail" id="rail" aria-label="Four antibiotic decisions"></nav>
+
+  <main id="stage"></main>
+
+  <footer>
+    <div>For education only. These cases are fictional and simplified; they do not replace clinical judgment, local antibiograms or institutional protocols. Not accredited for continuing education credit.</div>
+    <div>© 2026 Rodolfo J. Salas-Auvert, M.D. All rights reserved. Content may change without notice.</div>
+  </footer>
+</div>
+
+<script>
+const MOMENTS = [
+  {q:"Does this patient have an infection that needs antibiotics?", s:"Decision 1", t:"Is it infection?"},
+  {q:"Have I sent cultures, and what empiric therapy fits?", s:"Decision 2", t:"Empiric choice"},
+  {q:"A day or more later: can I stop, narrow or switch to oral?", s:"Decision 3", t:"Day 2–3 review"},
+  {q:"What duration does this infection need?", s:"Decision 4", t:"Duration"}
+];
+
+const CASES = [
+{
+  who:"Mrs. A., 84", where:"Admitted from long-term care · Medicine ward · Day 0",
+  roles:["Physician","Nurse"],
+  story:"Brought in for two days of new confusion. Baseline mild dementia; usually conversant. Staff noted she was drinking less. She cannot reliably report urinary symptoms. No flank pain on exam. A urine sample was sent on arrival.",
+  vitals:[["Temp","37.2 °C"],["HR","88"],["BP","128/74"],["RR","16"],["SpO₂","96% RA"]],
+  labs:[["WBC","8.9 ×10⁹/L"],["Na","149 mmol/L",1],["Glucose","6.1 mmol/L"],["UA","LE +, nitrite +, 25 WBC/hpf",1],["Urine cx","E. coli >10⁵ CFU/mL",1]],
+  meds:["Oxybutynin 5 mg daily (started 1 wk ago)","Donepezil 10 mg nightly"],
+  question:"The urine culture is positive. What is the best next step?",
+  opts:[
+    {t:"Start IV ceftriaxone for a urinary tract infection.", w:"She has no fever, no instability and no genitourinary signs. Bacteriuria is common in older residents of care facilities, and treating it does not improve delirium. Antibiotics here add C. difficile, resistance and drug-reaction risk."},
+    {t:"Hold antibiotics. Look for other causes of delirium and observe closely.", w:"Correct. Dehydration (Na 149) and a new anticholinergic (oxybutynin) are likely contributors. Reassess promptly if fever, hemodynamic instability or urinary symptoms appear.", ok:true},
+    {t:"Start oral nitrofurantoin as a gentler option.", w:"A narrower drug is still treatment of asymptomatic bacteriuria. The question is whether to treat at all, not which agent."},
+    {t:"Treat, then repeat the urine culture to confirm clearance.", w:"Test-of-cure cultures are not indicated, and this treatment course isn't either. Repeat cultures tend to generate more unnecessary treatment."}
+  ],
+  pearl:"Bacteriuria plus confusion is not a UTI. In older patients with delirium but no genitourinary symptoms or systemic signs, IDSA recommends assessing other causes and observing rather than treating. Nurses can help most upstream: don't send urine cultures without symptoms.",
+  ev:[["IDSA asymptomatic bacteriuria guideline, 2019","https://www.guidelinecentral.com/guideline/12791/"]]
+},
+{
+  who:"Ms. B., 45", where:"Emergency department → Medicine ward · Day 0",
+  roles:["Nurse","Physician"],
+  story:"Three days of a spreading, tender, warm red area on the left lower leg, no pus or abscess. Her chart says “PENICILLIN ALLERGY.” The team is about to order IV vancomycin. During admission, the nurse takes a detailed allergy history.",
+  vitals:[["Temp","38.1 °C",1],["HR","96"],["BP","124/78"],["RR","16"],["SpO₂","98% RA"]],
+  labs:[["WBC","12.4 ×10⁹/L",1],["Creatinine","68 µmol/L"],["Blood cx","Pending"]],
+  medsLabel:"Allergy history",
+  meds:["Allergy history: itchy rash on the trunk at age 6 while on amoxicillin for an ear infection","No hives, swelling, breathing difficulty or blistering","No penicillin since; no allergist evaluation"],
+  question:"What does this allergy history support?",
+  opts:[
+    {t:"Avoid all beta-lactams and give IV vancomycin.", w:"Nonpurulent cellulitis is mostly streptococcal, and a beta-lactam is the better drug. Vancomycin adds nephrotoxicity, monitoring and resistance pressure, all based on an unverified label."},
+    {t:"Record it as a low-risk history. Give cefazolin, and arrange a supervised oral amoxicillin challenge to remove the label.", w:"Correct. A remote, benign rash is low risk. Cefazolin has a side chain unlike amoxicillin and can be used. Low-risk labels can be tested with a direct oral challenge, often without skin testing.", ok:true},
+    {t:"Hold antibiotics until penicillin skin testing is done.", w:"Delaying treatment of a febrile infection isn't justified. Skin testing isn't required for a low-risk history, and it shouldn't hold up appropriate therapy."},
+    {t:"Give clindamycin instead.", w:"Clindamycin carries one of the highest C. difficile risks of any antibiotic, and streptococcal resistance to it is rising. It's a poor substitute when a beta-lactam can be used."}
+  ],
+  pearl:"About 10% of people in the U.S. report a penicillin allergy, but fewer than 1% of the population is truly allergic. A careful history, often taken by the nurse, is the first stewardship intervention. It opens the way to narrower, more effective drugs.",
+  ev:[["CDC: Removing inaccurate antibiotic allergy labels","https://cdc.gov/patient-safety/stories/antibiotic-stewardship-and-allergy-labels.html"]]
+},
+{
+  who:"Mr. C., 62", where:"Medicine ward (non-ICU) · Hospital day 2, 48 h",
+  roles:["Physician","Nurse"],
+  story:"Admitted with community-acquired pneumonia, right lower lobe infiltrate. In the ED he received ceftriaxone, azithromycin and vancomycin. No recent hospitalization, IV antibiotics or prior MRSA. He is now eating and walking the hallway.",
+  vitals:[["Temp","36.8 °C (afebrile 36 h)"],["HR","84"],["BP","132/80"],["RR","18"],["SpO₂","95% RA"]],
+  labs:[["MRSA nasal PCR","Negative"],["Blood cx","No growth at 48 h"],["Sputum cx","Normal respiratory flora"],["Creatinine","104 µmol/L (from 82)",1]],
+  meds:["Ceftriaxone 1 g IV daily","Azithromycin 500 mg daily","Vancomycin IV, trough-guided"],
+  question:"What is the best action at this review?",
+  opts:[
+    {t:"Continue all three antibiotics until day 7.", w:"The MRSA nasal PCR is negative, and he has no MRSA risk factors. Continuing vancomycin adds kidney risk; his creatinine is already rising. A fixed 7 days ignores how quickly he stabilized."},
+    {t:"Stop vancomycin. Continue ceftriaxone and azithromycin, switch to oral when ready, and aim for a 5-day total if he stays stable.", w:"Correct. A negative MRSA nasal PCR has a negative predictive value above 95% for MRSA pneumonia. ATS/IDSA guidance supports a minimum of 5 days, guided by clinical stability.", ok:true},
+    {t:"Escalate to piperacillin-tazobactam to be safe.", w:"He is improving. Escalating without a sign of failure or a resistant organism adds spectrum without benefit."},
+    {t:"Keep vancomycin until the final sputum culture is reported.", w:"Waiting for a final culture delays an available de-escalation decision. The nasal PCR answers the MRSA question now."}
+  ],
+  pearl:"A negative test only helps if someone acts on it. In a 2026 ICU trial, the MRSA nasal PCR had a negative predictive value of 98.9%, yet vancomycin use didn't fall. The test needs a time-out that turns the result into a stop order. Pharmacists and nurses can prompt it.",
+  ev:[["MRSA nasal PCR and de-escalation study","https://pmc.ncbi.nlm.nih.gov/articles/PMC5365699"],["STOP-Vanc randomized trial, Clin Infect Dis 2026","https://pubmed.ncbi.nlm.nih.gov/42227019/"]]
+},
+{
+  who:"Mr. D., 70", where:"Medicine ward · Hospital day 3, IV cefazolin",
+  roles:["Nurse","Physician"],
+  story:"Admitted with nonpurulent cellulitis of the right forearm. On IV cefazolin since admission. The marked border has receded about 60%, and pain is much better. Some pink discoloration remains. He is eating well and asking about going home.",
+  vitals:[["Temp","36.7 °C (afebrile 48 h)"],["HR","78"],["BP","138/82"],["RR","16"]],
+  labs:[["WBC","8.1 ×10⁹/L (from 13.2)"],["Blood cx","No growth, final"],["Oral intake","Tolerating diet and pills"]],
+  meds:["Cefazolin 2 g IV every 8 h · day 3"],
+  question:"What is the best plan for the rest of his course?",
+  opts:[
+    {t:"Continue IV cefazolin until the redness is completely gone.", w:"Residual erythema often takes days to fade after the infection is controlled; it isn't treatment failure. Prolonging IV therapy adds line risk and hospital days."},
+    {t:"Switch to oral cephalexin and stop after 5 days total. Extend only if he hasn't improved.", w:"Correct. IDSA recommends 5 days for uncomplicated cellulitis, extended only when the infection hasn't improved. He meets the criteria for switching from IV to oral.", ok:true},
+    {t:"Discharge on a 14-day oral course to be safe.", w:"A longer course doesn't reduce relapse in uncomplicated cellulitis. Each extra day of antibiotics raises the risk of side effects and C. difficile."},
+    {t:"Add doxycycline for MRSA coverage before discharge.", w:"He is responding to a beta-lactam, with no pus, abscess or MRSA risk. Adding MRSA coverage treats a pathogen that isn't there."}
+  ],
+  pearl:"The shortest effective course is a safety measure, not a cost cut. Nurses can trigger the day 2–3 time-out: note when the patient is afebrile and eating, and ask whether the drug can be switched to oral and when it will stop. Every antibiotic order should have a stop date.",
+  ev:[["IDSA skin and soft tissue infection guideline, 2014","https://doi.org/10.1093/cid/ciu296"]]
+}
+];
+
+const REFS = [
+  ["CDC. Core Elements of Hospital Antibiotic Stewardship Programs (2019; implementation priorities 2022).","https://cdc.gov/antibiotic-use/hcp/core-elements/hospital.html"],
+  ["AHRQ. Four Moments of Antibiotic Decision Making.","https://www.ahrq.gov/antibiotic-use/acute-care/four-moments/index.html"],
+  ["Nicolle LE et al. Management of asymptomatic bacteriuria: 2019 update by IDSA. Clin Infect Dis 2019;68:1611–15.","https://www.guidelinecentral.com/guideline/12791/"],
+  ["CDC. Antibiotic stewardship when an allergy label is present.","https://cdc.gov/patient-safety/stories/antibiotic-stewardship-and-allergy-labels.html"],
+  ["Nasal MRSA PCR testing reduces the duration of MRSA-targeted therapy in patients with suspected MRSA pneumonia.","https://pmc.ncbi.nlm.nih.gov/articles/PMC5365699"],
+  ["Freiberg JA et al. STOP-Vanc randomized trial. Clin Infect Dis 2026.","https://pubmed.ncbi.nlm.nih.gov/42227019/"],
+  ["Stevens DL et al. IDSA guideline for skin and soft tissue infections. Clin Infect Dis 2014;59:e10–52.","https://doi.org/10.1093/cid/ciu296"],
+  ["Gupta K et al. IDSA guideline for acute uncomplicated cystitis and pyelonephritis in women. Clin Infect Dis 2011;52:e103–20.","https://doi.org/10.1093/cid/ciq257"],
+  ["BALANCE Investigators. Seven versus 14 days of antibiotics for bloodstream infection. N Engl J Med 2025 (CIDRAP summary).","https://www.cidrap.umn.edu/antimicrobial-stewardship/trial-supports-shorter-antibiotic-treatment-bloodstream-infections"]
+];
+
+(function hourglass(){
+  const T=document.getElementById("hgT"), B=document.getElementById("hgB"), S=document.getElementById("hgS");
+  if(!T||!B||!S) return;
+  let still=false; try{ still = matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
+  if(still){ T.setAttribute("y","38"); B.setAttribute("y","74"); return; }
+  const M=T.closest("svg"), t0=performance.now(), FLOW=6000, FLIP=900;
+  M.style.transformOrigin="50% 50%";
+  (function tick(now){
+    const c=(now-t0)%(FLOW+FLIP);
+    if(c<FLOW){
+      const f=c/FLOW;
+      T.setAttribute("y",(30+19*f).toFixed(2)); B.setAttribute("y",(82-15*f).toFixed(2));
+      S.style.opacity=f<.97?1:0; M.style.transform="rotate(0deg)";
+    } else {
+      const g=(c-FLOW)/FLIP, e=g<.5?2*g*g:1-Math.pow(-2*g+2,2)/2;
+      T.setAttribute("y","49"); B.setAttribute("y","67"); S.style.opacity=0;
+      M.style.transform=`rotate(${(180*e).toFixed(1)}deg)`;
+    }
+    S.setAttribute("stroke-dashoffset",(-((now-t0)%600)/100).toFixed(2));
+    requestAnimationFrame(tick);
+  })(t0);
+})();
+const state = {mode:"cases", view:"intro", answers:[null,null,null,null]};
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function correctCount(){return state.answers.reduce((n,a,i)=>n+(a!==null && cur()[i].opts[a].ok?1:0),0)}
+function answeredCount(){return state.answers.filter(a=>a!==null).length}
+
+function renderRail(){
+  const cur = typeof state.view==="number" ? state.view : -1;
+  $("#rail").innerHTML = MOMENTS.map((m,i)=>{
+    const done = state.answers[i]!==null;
+    const reachable = done || i===0 || state.answers[i-1]!==null;
+    return `<button class="step${done?" done":""}" ${i===cur?'aria-current="step"':""} ${reachable?"":"disabled"} data-go="${i}">
+      <span class="n">${m.s}</span><span class="t">${m.t}</span></button>`;
+  }).join("");
+  $("#score").innerHTML = `Score <b>${correctCount()}</b> / 4`;
+}
+
+function renderIntro(){
+  $("#stage").innerHTML = `<section class="panel">
+    <div class="eyebrow">Case-based module · about 15 minutes</div>
+    <h2 style="font-size:clamp(24px,3.4vw,32px)">Four bedside decisions that decide most antibiotic use</h2>
+    <p class="lede">More than half of hospital patients receive an antibiotic, and much of that use can be improved. Work through four patients, one for each key decision. Choose the best action, then see why each option is right or wrong.</p>
+    <p class="hint">The four decisions follow AHRQ's <a href="https://www.ahrq.gov/antibiotic-use/acute-care/four-moments/index.html" target="_blank" rel="noopener" style="color:inherit">Four Moments of Antibiotic Decision Making</a>.</p>
+    <div class="moments">${MOMENTS.map(m=>`<div class="moment"><span class="eyebrow">${m.s}</span><span class="q">${m.q}</span></div>`).join("")}</div>
+    <div class="meta"><span>Audience: hospital physicians, nurses, pharmacists</span><span>Format: 4 cases, single best answer</span><span>Evidence: CDC, IDSA, ATS/IDSA, recent trials</span></div>
+    <div class="row"><button class="btn" data-go="0">Start case 1</button><button class="btn ghost" data-mode="explorer">Try the body map explorer</button></div>
+    <p class="hint">The body map explorer follows one patient over five days as an infection spreads between body compartments, and shows how the site changes the drug, the tests and the duration.</p>
+  </section>`;
+}
+
+function renderCase(i){
+  const c = cur()[i], a = state.answers[i], answered = a!==null;
+  const kv = rows => `<dl class="kv">${rows.map(([k,v,f])=>`<dt>${k}</dt><dd${f?' class="flag"':""}>${esc(v)}</dd>`).join("")}</dl>`;
+  const opts = c.opts.map((o,j)=>{
+    let cls="opt";
+    if(answered){ if(o.ok) cls+=" right"; else if(j===a) cls+=" wrong"; else cls+=" dim"; }
+    return `<button class="${cls}" data-pick="${j}" ${answered?"disabled":""} aria-pressed="${j===a}">
+      <span class="letter">${"ABCD"[j]}</span>
+      <span class="body"><span>${esc(o.t)}</span>${answered?`<span class="why">${esc(o.w)}</span>`:""}</span></button>`;
+  }).join("");
+  const isLast = i===cur().length-1;
+  $("#stage").innerHTML = `<section class="case">
+    <article class="chart" aria-label="Patient chart">
+      <div class="wristband"><span class="who">${c.who}</span><span class="where">${c.where}</span></div>
+      <div class="chart-body">
+        <p class="story">${esc(c.story)}</p>
+        <div class="sub">Vitals</div>${kv(c.vitals)}
+        <div class="sub">Results</div>${kv(c.labs)}
+        <div class="sub">${c.medsLabel||"Medications"}</div>
+        <ul class="meds">${c.meds.map(m=>`<li>${esc(m)}</li>`).join("")}</ul>
+      </div>
+    </article>
+    <div class="decide">
+      <div class="role"><span class="chip">${MOMENTS[i].s}: ${MOMENTS[i].t}</span>${c.roles.map(r=>`<span class="chip">${r}</span>`).join("")}</div>
+      <h2>${esc(c.question)}</h2>
+      <div class="opts" role="group" aria-label="Answer options">${opts}</div>
+      ${answered?`
+        <p class="verdict ${c.opts[a].ok?"good":"bad"}" role="status">${c.opts[a].ok?"Right call.":"Not the best choice. The recommended action is "+ "ABCD"[c.opts.findIndex(o=>o.ok)] +"."}</p>
+        <div class="pearl"><span class="eyebrow">Stewardship point</span><p>${esc(c.pearl)}</p>
+          <p class="ev">Evidence: ${c.ev.map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(t)}</a>`).join(" · ")}</p></div>
+        <div class="row"><button class="btn" data-go="${isLast?"summary":i+1}">${isLast?"See your results":"Next case"}</button></div>`
+      :`<p class="ev">Choose one answer. Feedback appears for every option.</p>`}
+    </div>
+  </section>`;
+}
+
+function renderSummary(){
+  const n = correctCount();
+  const msg = n===4?"You made the stewardship call in every case.":n>=2?"Solid. Review the cases you missed below.":"Worth another pass through the cases.";
+  $("#stage").innerHTML = `<section class="panel">
+    <div class="eyebrow">Results</div>
+    <div class="row" style="align-items:baseline;gap:16px"><span class="big">${n}/4</span><h2 style="font-size:24px">${msg}</h2></div>
+    <div class="results">${cur().map((c,i)=>{const ok=c.opts[state.answers[i]]?.ok;return `<div class="res">
+      <span class="k">${MOMENTS[i].s} · ${MOMENTS[i].t}</span><span>${c.who}</span>
+      <span class="${ok?"ok":"no"}">${ok?"Correct":"Review"}</span>
+      <button class="btn ghost" style="padding:6px 12px;font-size:14px" data-go="${i}">Revisit</button></div>`}).join("")}</div>
+    <h3 style="font-size:20px">Take these to the bedside</h3>
+    <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;max-width:68ch">
+      <li>Send urine cultures only when there are urinary or systemic signs.</li>
+      <li>Take a real allergy history before working around a penicillin label.</li>
+      <li>At 48–72 hours, review cultures and act on negative results: stop, narrow or switch to oral.</li>
+      <li>Give every antibiotic order a stop date, using the shortest course that works.</li>
+    </ul>
+    <h3 style="font-size:20px">References</h3>
+    <ol class="refs">${REFS.map(([t,u])=>`<li><a href="${u}" target="_blank" rel="noopener">${esc(t)}</a></li>`).join("")}</ol>
+    <div class="row">${state.track==="cme"
+      ? `<button class="btn" data-cmenext>Continue to the body map scenario</button>`
+      : `<button class="btn ghost" data-reset>Start over</button>`}</div>
+  </section>`;
+}
+
+/* ---------------- Body map explorer ---------------- */
+const COMPS = {
+  skin:{name:"Skin and soft tissue", text:"Cellulitis usually needs about 5 days if it is improving. An abscess needs drainage; antibiotics alone are not enough."},
+  brain:{name:"Central nervous system", text:"Drug choice is limited by penetration across the blood-brain barrier. Meningitis needs high doses of agents that reach the spinal fluid."},
+  lungs:{name:"Lungs and pleura", text:"Pneumonia courses are short when the patient stabilizes. An empyema needs drainage. A negative MRSA nasal PCR supports stopping MRSA coverage."},
+  heart:{name:"Heart valves", text:"Endocarditis needs prolonged, usually IV, therapy, often 4–6 weeks, with infectious diseases input."},
+  gut:{name:"Abdomen", text:"Intra-abdominal infections depend on source control. After drainage or surgery, short courses of about 4 days are usually enough."},
+  kidney:{name:"Kidney", text:"Pyelonephritis needs a drug that reaches kidney tissue and blood: a fluoroquinolone, trimethoprim-sulfamethoxazole if susceptible, or a cephalosporin. Fever, flank pain or vomiting signal upper-tract infection."},
+  ureter:{name:"Ureter", text:"A blocked, infected kidney is a urologic emergency. Antibiotics cannot sterilize trapped pus; drainage by stent or nephrostomy is the source control."},
+  bladder:{name:"Bladder", text:"Nitrofurantoin and fosfomycin concentrate in urine and treat cystitis well, but they reach little drug in kidney tissue or blood."},
+  blood:{name:"Bloodstream", text:"Gram-negative bacteremia from a controlled source can often be treated for 7 days. Staphylococcus aureus bacteremia is different: it always needs a longer course and infectious diseases input."},
+  liver:{name:"Liver and biliary tract", text:"Cholangitis and gallbladder infections depend on drainage of the bile ducts or gallbladder; once the source is controlled, short courses are usually enough. A liver abscess needs drainage and a longer course."},
+  bone:{name:"Bone and joints", text:"Osteomyelitis usually needs several weeks of therapy and sometimes surgical debridement. Bone penetration guides drug choice."}
+};
+
+const SCEN = {
+  who:"Mrs. E., 68",
+  base:"Hypertension · eGFR 70 · no antibiotics or hospital stays in the past year · no prior resistant organisms",
+  stages:[
+  {
+    tl:"Day 0", tlname:"Cystitis", where:"Urgent care visit", sel:"bladder",
+    status:{bladder:"infected"},
+    story:"Two days of burning on urination, frequency and urgency. No fever, flank pain, nausea or vaginal symptoms.",
+    vitals:[["Temp","37.0 °C"],["HR","82"],["BP","136/84"]],
+    labs:[["Urine dipstick","LE +, nitrite +",1],["Creatinine","72 µmol/L"]],
+    q:"What is the best initial treatment?",
+    opts:[
+      {t:"Nitrofurantoin 100 mg twice daily for 5 days.", w:"Correct. A first-line choice for uncomplicated cystitis, with adequate kidney function. It concentrates in the bladder, where the infection is.", ok:true},
+      {t:"Ciprofloxacin for 7 days.", w:"Effective, but fluoroquinolones are reserved for cystitis because of tendon, nerve and aortic adverse effects. Keep it in reserve; it may be needed later."},
+      {t:"No antibiotics. This is asymptomatic bacteriuria.", w:"She has dysuria, frequency and urgency, so this is symptomatic cystitis, not asymptomatic bacteriuria."},
+      {t:"Admit for IV ceftriaxone.", w:"She has no systemic signs. Oral therapy at home is appropriate for cystitis."}
+    ],
+    ev:[["IDSA cystitis and pyelonephritis guideline, 2010","https://doi.org/10.1093/cid/ciq257"]]
+  },
+  {
+    tl:"Day 2", tlname:"Kidney", where:"Emergency department, evening", sel:"kidneyR",
+    status:{bladder:"infected",kidneyR:"infected",ureterR:"risk",blood:"risk"},
+    story:"Despite two days of nitrofurantoin: fever with rigors, right flank pain and vomiting twice. Right costovertebral angle tenderness.",
+    vitals:[["Temp","39.1 °C",1],["HR","112",1],["BP","104/66"],["RR","22",1]],
+    labs:[["WBC","17.8 ×10⁹/L",1],["Lactate","2.4 mmol/L",1],["Creatinine","98 µmol/L (from 72)",1]],
+    q:"The infection has reached the kidney. What should happen next?",
+    opts:[
+      {t:"Continue nitrofurantoin; E. coli is usually susceptible.", w:"Nitrofurantoin reaches little drug in kidney tissue or blood. It should not be used for pyelonephritis, whatever the susceptibility."},
+      {t:"Send blood and urine cultures, then start IV ceftriaxone and admit.", w:"Correct. Cultures go before the first dose. Ceftriaxone is a reasonable empiric choice where local resistance is low; your antibiogram decides.", ok:true},
+      {t:"Start meropenem and vancomycin.", w:"She has no risk factors for resistant gram-negatives or MRSA. This spectrum is far broader than needed."},
+      {t:"Send her home on oral amoxicillin-clavulanate.", w:"She is vomiting and has signs of sepsis. Oral beta-lactams are also less effective for pyelonephritis."}
+    ],
+    ev:[["NHS: Avoid nitrofurantoin in pyelonephritis","https://www.medicinesresources.nhs.uk/best-practice-reminder-avoid-nitrofurantoin-in-the-treatment-of-pyelonephritis-1.html"]]
+  },
+  {
+    tl:"Day 3", tlname:"Blood", where:"Medicine ward · 24 h on ceftriaxone", sel:"blood",
+    status:{bladder:"infected",kidneyR:"infected",ureterR:"risk",blood:"infected"},
+    story:"Still febrile. Blood pressure fell to 88/52 and rose to 102/64 after 30 mL/kg of fluids. The lab calls with a positive blood culture.",
+    vitals:[["Temp","38.9 °C",1],["HR","118",1],["BP","102/64 after fluids",1]],
+    labs:[["Blood cx","Gram-negative rods, 2 of 2 sets",1],["Urine cx","E. coli >10⁵ CFU/mL, susceptibilities pending",1],["Lactate","3.1 mmol/L",1],["Creatinine","142 µmol/L",1]],
+    q:"She is getting worse on treatment that should be working. What is the priority?",
+    opts:[
+      {t:"Escalate to meropenem.", w:"Changing the drug without evidence of resistance misses the most common reason pyelonephritis doesn't respond: an anatomic problem. If she had ESBL risk factors, escalation could go alongside imaging, never instead of it."},
+      {t:"Urgent kidney imaging to look for obstruction or abscess.", w:"Correct. Imaging is indicated when pyelonephritis comes with sepsis or fails to improve within 48–72 hours. An obstructed or abscessed kidney needs drainage.", ok:true},
+      {t:"Add vancomycin.", w:"Gram-negative rods don't need MRSA coverage. This adds kidney toxicity to a patient whose creatinine is already rising."},
+      {t:"Wait 24–48 hours for susceptibilities.", w:"She is unstable. Waiting delays finding a source that antibiotics can't fix."}
+    ],
+    ev:[]
+  },
+  {
+    tl:"Day 3 +2 h", tlname:"Ureter", where:"CT abdomen and pelvis result", sel:"ureterR",
+    status:{bladder:"infected",kidneyR:"infected",ureterR:"infected",blood:"infected"},
+    story:"CT shows a 7 mm stone blocking the right proximal ureter, with moderate hydronephrosis and stranding around the kidney. No abscess.",
+    vitals:[["Temp","38.8 °C",1],["HR","114",1],["BP","104/66"]],
+    labs:[["CT","Obstructing R ureteral stone, hydronephrosis",1]],
+    q:"What does she need now?",
+    opts:[
+      {t:"Urgent drainage by ureteral stent or nephrostomy, continuing ceftriaxone.", w:"Correct. An infected, obstructed kidney is a urologic emergency. Drainage is the source control that lets the antibiotic work.", ok:true},
+      {t:"Continue antibiotics, add tamsulosin and wait for the stone to pass.", w:"Medical expulsive therapy is for uninfected stones. With infection behind the blockage, waiting risks septic shock."},
+      {t:"Add gentamicin for synergy.", w:"No combination of drugs drains trapped pus. The problem is anatomic."},
+      {t:"Remove the stone by ureteroscopy now.", w:"In active infection the standard is to drain first and remove the stone later, once the infection is treated."}
+    ],
+    ev:[]
+  },
+  {
+    tl:"Day 5", tlname:"Step-down", where:"Medicine ward · stent placed day 3", sel:"blood",
+    status:{bladder:"cleared",kidneyR:"risk",ureterR:"cleared",blood:"cleared"},
+    story:"Afebrile for 40 hours, eating, walking. Repeat blood cultures from day 4 show no growth.",
+    vitals:[["Temp","36.8 °C"],["HR","80"],["BP","124/76"]],
+    labs:[["E. coli","Susceptible: ceftriaxone, ciprofloxacin, TMP-SMX"],["","Resistant: ampicillin",1],["Creatinine","88 µmol/L"]],
+    q:"How should you finish her course?",
+    opts:[
+      {t:"Continue IV ceftriaxone for 14 days.", w:"The source is drained and she is stable. Neither IV therapy nor 14 days adds benefit here."},
+      {t:"Switch to oral ciprofloxacin to finish 7 days of active therapy, counted from day 2, and plan stone removal.", w:"Correct. The source is controlled, the organism is susceptible, and ciprofloxacin is well absorbed by mouth. In the BALANCE trial, 7 days was noninferior to 14 for hospitalized patients with bacteremia (excluding S. aureus).", ok:true},
+      {t:"Switch to oral amoxicillin.", w:"The isolate is resistant to ampicillin, so amoxicillin won't work."},
+      {t:"Plan 6 weeks of therapy because the blood was involved.", w:"Six-week courses are for bone or endocarditis. Gram-negative bacteremia from a drained urinary source does not need them."}
+    ],
+    ev:[["BALANCE trial: 7 vs 14 days for bloodstream infection (CIDRAP)","https://www.cidrap.umn.edu/antimicrobial-stewardship/trial-supports-shorter-antibiotic-treatment-bloodstream-infections"]]
+  }],
+  final:{bladder:"cleared",kidneyR:"cleared",ureterR:"cleared",blood:"cleared"}
+};
+
+const ex = {stage:0, answers:Array(SCEN.stages.length).fill(null), sel:"bladder"};
+const STATE_LABEL = {infected:"Infected", risk:"At risk / recovering", cleared:"Cleared", none:"Not involved"};
+
+function infoKey(id){return id.replace(/[RL]$/,"")}
+function curStatus(){return ex.stage>=SCEN.stages.length ? SCEN.final : SCEN.stages[ex.stage].status}
+
+function smoothPath(pts){
+  // closed Catmull-Rom spline through the points, as cubic Beziers
+  const n = pts.length, P = i => pts[(i+n)%n];
+  let d = `M${P(0)[0]} ${P(0)[1]}`;
+  for(let i=0;i<n;i++){
+    const p0=P(i-1), p1=P(i), p2=P(i+1), p3=P(i+2);
+    const c1=[p1[0]+(p2[0]-p0[0])/6, p1[1]+(p2[1]-p0[1])/6], c2=[p2[0]-(p3[0]-p1[0])/6, p2[1]-(p3[1]-p1[1])/6];
+    d += ` C${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0]} ${p2[1]}`;
+  }
+  return d + " Z";
+}
+// Right half of the silhouette as drawn (viewer's right = patient's left), neck to crotch; mirrored for the other half.
+// Right half of the body contour as drawn (viewer's right = patient's left), neck to crotch; mirrored for the other half.
+const HALF = [[163,98],[164,112],[178,119],[196,123],[210,129],[219,141],[223,160],[225,185],[228,215],[230,246],[234,272],[236,300],[237,326],[241,341],[244,362],[241,384],[234,396],[226,392],[222,372],[221,350],[219,330],[215,300],[211,272],[208,248],[204,215],[200,186],[195,168],[192,178],[191,205],[187,236],[186,256],[192,284],[199,310],[201,342],[198,382],[192,430],[188,470],[187,496],[190,526],[188,562],[180,612],[179,630],[187,646],[184,658],[165,660],[161,646],[163,618],[163,578],[165,540],[162,496],[160,470],[158,420],[156,380],[150,350]];
+const OUTLINE = smoothPath(HALF.slice(0,-1).concat([[150,350]], HALF.slice(0,-1).reverse().map(([x,y])=>[300-x,y])));
+const HEAD = "M150 22 C171 22 182 38 182 58 C182 76 176 90 166 98 C160 103 155 106 150 106 C145 106 140 103 134 98 C124 90 118 76 118 58 C118 38 129 22 150 22 Z";
+function kidney(cx, cy, dir){ // dir 1 = hilum faces viewer's right
+  const X = dx => (cx + dir*dx).toFixed(1);
+  return `M${X(-2)} ${cy-19} C${X(-12)} ${cy-19} ${X(-14)} ${cy-5} ${X(-13)} ${cy+3} C${X(-12)} ${cy+14} ${X(-7)} ${cy+19} ${X(1)} ${cy+18} C${X(6)} ${cy+17} ${X(8)} ${cy+12} ${X(5)} ${cy+7} C${X(3)} ${cy+3} ${X(3)} ${cy-3} ${X(5)} ${cy-7} C${X(8)} ${cy-12} ${X(6)} ${cy-19} ${X(-2)} ${cy-19} Z`;
+}
+
+function bodySVG(st, sel){
+  const g = (id, cls, inner) => {
+    const s = st[id] || "";
+    const name = COMPS[infoKey(id)].name + (id.endsWith("R")?" (right)":id.endsWith("L")?" (left)":"");
+    return `<g class="comp ${cls} ${s} ${sel===id?"selected":""}" data-comp="${id}" tabindex="0" role="button" aria-label="${name}: ${STATE_LABEL[s||"none"]}">${inner}</g>`;
+  };
+  const tube = d => `<path class="hit" d="${d}"/><path class="shape" d="${d}"/>`;
+  const ARTERY = [
+    "M154 300 V168 C154 152 146 146 140 152",
+    "M152 150 C170 140 196 142 208 160 C212 190 216 220 220 250 C223 280 226 305 228 330",
+    "M148 150 C130 140 104 142 92 160 C88 190 84 220 80 250 C77 280 74 305 72 330",
+    "M146 150 V112 C146 100 142 92 140 84", "M154 150 V112 C154 100 158 92 160 84",
+    "M154 300 C146 312 132 326 126 344 C124 400 125 450 126 490 C127 540 128 580 129 620",
+    "M154 300 C160 312 170 326 174 344 C176 400 175 450 174 490 C173 540 172 580 171 620"].join(" ");
+  const VEIN = "M144 172 V302";
+  return `<svg class="bodymap" viewBox="0 0 300 670" aria-label="Front view of the body; patient's right is on your left">
+    <defs><linearGradient id="bodyshade" x1="0" x2="1"><stop offset="0" style="stop-color:var(--band)"/><stop offset=".5" style="stop-color:var(--surface)"/><stop offset="1" style="stop-color:var(--band)"/></linearGradient></defs>
+    <text class="lbl" x="36" y="134">R</text><text class="lbl" x="256" y="134">L</text>
+    ${g("skin","skin",`<path class="shape" d="${OUTLINE}"/><path class="shape" d="${HEAD}"/>
+      <ellipse class="shape" cx="117" cy="62" rx="4" ry="9"/><ellipse class="shape" cx="183" cy="62" rx="4" ry="9"/>
+      <path class="detail" d="M112 128 C126 123 138 125 147 129 M188 128 C174 123 162 125 153 129 M150 268 v3"/>`)}
+    ${g("bone","",`<path class="shape" d="M104 300 C99 316 103 334 117 344 L139 352 C145 355 155 355 161 352 L183 344 C197 334 201 316 196 300 C190 312 177 318 168 326 L150 333 L132 326 C123 318 110 312 104 300 Z"/>
+      <rect class="shape" x="118" y="350" width="10" height="128" rx="5" transform="rotate(-2 123 414)"/>
+      <rect class="shape" x="172" y="350" width="10" height="128" rx="5" transform="rotate(2 177 414)"/>`)}
+    ${g("brain","",`<path class="shape" d="M150 30 C166 30 177 42 177 56 C177 68 170 75 160 77 L140 77 C130 75 123 68 123 56 C123 42 134 30 150 30 Z"/>
+      <path class="detail" d="M150 31 V76 M131 44 C136 48 134 54 140 56 M128 62 C134 60 138 66 144 64 M169 44 C164 48 166 54 160 56 M172 62 C166 60 162 66 156 64"/>`)}
+    ${g("lungs","",`<path class="shape" d="M143 140 C130 134 116 140 110 156 C104 176 102 204 104 226 C112 232 128 230 140 224 C144 214 146 190 145 160 Z"/>
+      <path class="shape" d="M157 140 C170 134 184 140 190 156 C196 176 198 204 196 228 C188 232 172 230 160 226 C162 214 172 210 172 200 C172 192 162 188 157 180 Z"/>
+      <path class="detail" d="M150 104 V136 M150 136 L143 146 M150 136 L157 146 M107 192 C120 188 132 186 145 184 M105 212 C118 202 130 196 144 196 M195 204 C184 198 171 188 160 168"/>`)}
+    ${g("heart","",`<path class="shape" d="M138 182 C136 172 148 166 156 172 C164 166 178 170 177 184 C176 198 168 212 172 224 C160 220 146 210 140 198 C138 192 138 187 138 182 Z"/>`)}
+    ${g("gut","",`<path class="shape" d="M170 238 C186 236 194 248 190 264 C186 280 170 288 156 284 C150 282 150 274 158 272 C170 270 176 262 172 252 C170 246 166 242 170 238 Z"/>
+      <path class="shape" d="M114 326 C108 312 108 290 116 280 C130 274 172 274 186 282 C192 292 192 312 188 324 C182 334 170 338 160 336"/>
+      <ellipse class="shape" cx="150" cy="306" rx="26" ry="20"/>
+      <path class="detail" d="M132 300 C138 292 146 300 152 294 C158 288 166 298 170 304 M134 314 C142 308 150 318 158 312 C164 308 168 316 166 320"/>`)}
+    ${g("liver","",`<path class="shape" d="M104 234 C120 226 160 226 186 232 C184 240 172 248 156 254 C140 262 120 268 108 264 C102 256 101 244 104 234 Z"/>
+      <path class="shape" d="M124 262 C120 258 122 250 128 252 C134 254 134 264 130 270 C127 272 124 268 124 262 Z"/>`)}
+    ${g("kidneyR","",`<path class="shape" d="${kidney(122,286,1)}"/>`)}
+    ${g("kidneyL","",`<path class="shape" d="${kidney(178,278,-1)}"/>`)}
+    ${g("ureterR","tube",tube("M127 293 C131 308 129 322 141 333"))}
+    ${g("ureterL","tube",tube("M173 285 C169 304 171 320 159 333"))}
+    ${g("bladder","",`<path class="shape" d="M136 334 C136 326 164 326 164 334 C166 344 158 348 150 348 C142 348 134 344 136 334 Z"/>`)}
+    ${g("blood","vessel",`<path class="hit" d="${ARTERY} ${VEIN}"/><path class="shape" d="${ARTERY}"/><path class="shape vein" d="${VEIN}"/>`)}
+  </svg>`;
+}
+
+function exScore(){return ex.answers.reduce((n,a,i)=>n+(a!==null&&SCEN.stages[i].opts[a].ok?1:0),0)}
+
+function renderExplorer(){
+  const N = SCEN.stages.length, done = ex.stage>=N;
+  const st = curStatus(), s = done?null:SCEN.stages[ex.stage];
+  const selState = st[ex.sel] || "none";
+  const info = COMPS[infoKey(ex.sel)];
+  const tl = SCEN.stages.map((x,i)=>`<div class="tl ${i===ex.stage?"cur":""} ${i<ex.stage?"done":""}">${x.tl}<b>${x.tlname}</b></div>`).join("")
+    + `<div class="tl ${done?"cur":""}">Outcome<b>Recovery</b></div>`;
+  const kv = rows => `<dl class="kv">${rows.map(([k,v,f])=>`<dt>${k}</dt><dd${f?' class="flag"':""}>${esc(v)}</dd>`).join("")}</dl>`;
+  let right;
+  if(!done){
+    const a = ex.answers[ex.stage], answered = a!==null;
+    const opts = s.opts.map((o,j)=>{
+      let cls="opt"; if(answered){cls+= o.ok?" right": j===a?" wrong":" dim";}
+      return `<button class="${cls}" data-expick="${j}" ${answered?"disabled":""} aria-pressed="${j===a}">
+        <span class="letter">${"ABCD"[j]}</span><span class="body"><span>${esc(o.t)}</span>${answered?`<span class="why">${esc(o.w)}</span>`:""}</span></button>`;
+    }).join("");
+    right = `<div class="decide">
+      <article class="chart">
+        <div class="wristband"><span class="who">${SCEN.who}</span><span class="where">${s.tl} · ${s.where}</span></div>
+        <div class="chart-body">
+          ${ex.stage===0?`<p class="hint">${esc(SCEN.base)}</p>`:""}
+          <p class="story">${esc(s.story)}</p>
+          <div class="sub">Vitals</div>${kv(s.vitals)}
+          <div class="sub">Results</div>${kv(s.labs)}
+        </div>
+      </article>
+      <h2>${esc(s.q)}</h2>
+      <div class="opts" role="group" aria-label="Answer options">${opts}</div>
+      ${answered?`<p class="verdict ${s.opts[a].ok?"good":"bad"}" role="status">${s.opts[a].ok?"Right call.":"Not the best choice. The case continues with option "+"ABCD"[s.opts.findIndex(o=>o.ok)]+"."}</p>
+        ${s.ev.length?`<p class="ev">Evidence: ${s.ev.map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(t)}</a>`).join(" · ")}</p>`:""}
+        <div class="row"><button class="btn" data-exnext>${ex.stage===N-1?"See the outcome":"Advance to "+SCEN.stages[ex.stage+1].tl}</button></div>`
+      :`<p class="ev">Choose one answer. The body map updates as the case moves forward.</p>`}
+    </div>`;
+  } else {
+    const n = exScore();
+    right = `<div class="panel">
+      <div class="eyebrow">Outcome · ${n} of ${N} best calls</div>
+      <h2 style="font-size:clamp(22px,3vw,28px)">Mrs. E. went home on day 6 to finish oral ciprofloxacin, with stone removal booked.</h2>
+      <ol class="path">
+        <li><span class="d">Day 0 · bladder</span><span>The site chose the drug. Nitrofurantoin fits the bladder, not the kidney or blood.</span></li>
+        <li><span class="d">Day 2 · kidney</span><span>Fever and flank pain moved the infection upstream, so the drug had to change. Cultures came first.</span></li>
+        <li><span class="d">Day 3 · blood</span><span>Failure on reasonable therapy pointed to anatomy, not resistance. Imaging came before escalation.</span></li>
+        <li><span class="d">Day 3 · ureter</span><span>Drainage, not a stronger drug, turned the case around.</span></li>
+        <li><span class="d">Day 5 · step-down</span><span>Controlled source plus a susceptible organism allowed oral therapy and 7 days in total.</span></li>
+      </ol>
+      <div class="row">${state.track==="cme"
+        ? `<button class="btn" data-cmenext>Continue to the post-test</button>`
+        : `<button class="btn ghost" data-exreset>Run the scenario again</button><button class="btn ghost" data-mode="cases">Go to case review</button>`}</div>
+    </div>`;
+  }
+  $("#stage").innerHTML = `<div class="wrap" style="gap:16px;max-width:none">
+    <div class="timeline" aria-label="Scenario timeline">${tl}</div>
+    <section class="explorer">
+      <aside class="bodycard" aria-label="Body map">
+        <div class="eyebrow">Where is the infection?</div>
+        ${bodySVG(st, ex.sel)}
+        <div class="legend"><span><i class="sw inf"></i>Infected</span><span><i class="sw risk"></i>At risk / recovering</span><span><i class="sw ok"></i>Cleared</span><span><i class="sw"></i>Not involved</span></div>
+        <div class="compinfo" aria-live="polite">
+          <span class="state-tag ${selState}">${STATE_LABEL[selState]}</span>
+          <h3>${info.name}</h3>
+          <p>${esc(info.text)}</p>
+        </div>
+        <p class="hint">Tap any part of the body to see how infection there changes treatment.</p>
+      </aside>
+      ${right}
+    </section>
+  </div>`;
+}
+
+/* ---------------- Antibiotic reference ---------------- */
+// Curated stewardship cards (physician review required). Official label facts come from the db, refreshed weekly.
+const DRUGS = [
+  {id:"nitrofurantoin", name:"Nitrofurantoin", cls:"Nitrofuran", route:"Oral",
+   spectrum:"E. coli, Staphylococcus saprophyticus and most enterococci. Weak or no activity against Proteus, Pseudomonas and many Klebsiella.",
+   uses:"Acute uncomplicated cystitis.",
+   oral:"Oral only. Concentrates in the urine.",
+   reach:"Kidney tissue and blood: levels are too low. Do not use for pyelonephritis or bacteremia.",
+   notes:["First-line choice for uncomplicated cystitis.","Avoid with markedly reduced kidney function (AGS Beers criteria: creatinine clearance below 30 mL/min).","Long-term use carries pulmonary and liver toxicity."],
+   setid:"8f270a9f-12a1-44d4-bc7e-873613555801", cases:"Explorer day 0 and 2"},
+  {id:"ceftriaxone", name:"Ceftriaxone", cls:"Third-generation cephalosporin", route:"IV or IM, once daily",
+   spectrum:"Streptococci including pneumococcus, many Enterobacterales (not ESBL or AmpC producers), Haemophilus, Neisseria. No activity against Pseudomonas, enterococci or MRSA.",
+   uses:"Community-acquired pneumonia, pyelonephritis, meningitis (high dose), gonorrhea.",
+   oral:"No oral form.",
+   reach:"Reaches the spinal fluid when the meninges are inflamed, at meningitis doses.",
+   notes:["Once-daily dosing suits outpatient IV therapy.","Broad gram-negative coverage raises C. difficile and resistance risk; narrow when cultures allow.","Biliary sludge can occur with prolonged courses."],
+   setid:"5cd2d96f-83e5-4326-ae87-d0ede4ba493a", cases:"Case 3, Explorer days 2–5"},
+  {id:"cefazolin", name:"Cefazolin", cls:"First-generation cephalosporin", route:"IV",
+   spectrum:"MSSA and streptococci; some E. coli, Klebsiella and Proteus. No activity against MRSA, enterococci, Pseudomonas or most anaerobes.",
+   uses:"Cellulitis needing IV therapy, MSSA bacteremia, surgical prophylaxis.",
+   oral:"No oral form; cephalexin is the oral counterpart.",
+   reach:"Poor central nervous system penetration.",
+   notes:["A drug of choice for MSSA infections, often preferred over vancomycin.","Its side chain differs from penicillins and aminopenicillins, so most patients with a penicillin allergy label can receive it."],
+   setid:"1367568c-7d27-479f-a4c5-58e99942f686", cases:"Cases 2 and 4"},
+  {id:"cephalexin", name:"Cephalexin", cls:"First-generation cephalosporin", route:"Oral",
+   spectrum:"Streptococci and MSSA; some E. coli, Klebsiella and Proteus. No MRSA or enterococcal activity.",
+   uses:"Uncomplicated cellulitis and oral step-down after IV cefazolin.",
+   oral:"Well absorbed by mouth.",
+   reach:"Poor central nervous system penetration.",
+   notes:["The usual oral step-down for streptococcal or MSSA skin infection.","Five days total is usually enough for uncomplicated cellulitis that is improving."],
+   setid:"33ad783f-b633-6a70-e054-00144ff8d46c", cases:"Case 4"},
+  {id:"ciprofloxacin", name:"Ciprofloxacin", cls:"Fluoroquinolone", route:"Oral or IV",
+   spectrum:"Gram-negative bacilli including Pseudomonas. Weak against pneumococcus and anaerobes.",
+   uses:"Pyelonephritis and complicated urinary infections, oral step-down for susceptible gram-negative infections.",
+   oral:"Well absorbed by mouth; oral and IV give similar exposure.",
+   reach:"Good tissue penetration, including kidney, prostate and bone.",
+   notes:["Carries an FDA boxed warning for disabling adverse reactions.","Reserve for uncomplicated infections only when other options are unsuitable.","Calcium, magnesium, iron and antacids reduce absorption; QT prolongation and interactions to check."],
+   setid:"888dc7f9-ad9c-4c00-8d50-8ddfd9bd27c0", cases:"Explorer days 0 and 5"},
+  {id:"vancomycin", name:"Vancomycin", cls:"Glycopeptide", route:"IV (oral only for C. difficile)",
+   spectrum:"Gram-positives including MRSA, MSSA and many enterococci (not VRE). No gram-negative activity.",
+   uses:"Suspected or proven MRSA infection; oral form for C. difficile infection.",
+   oral:"Not absorbed by mouth. Oral vancomycin treats only infection inside the gut.",
+   reach:"Variable lung and spinal fluid penetration.",
+   notes:["Nephrotoxic; dosing is guided by drug levels (AUC monitoring).","Stop empiric therapy when MRSA isn't found: a negative MRSA nasal PCR supports stopping in pneumonia.","For MSSA, switch to cefazolin or an antistaphylococcal penicillin."],
+   setid:"e4ce7b87-fab4-4b7a-b121-eba136c464ce", cases:"Case 3"},
+  {id:"azithromycin", name:"Azithromycin", cls:"Macrolide", route:"Oral or IV",
+   spectrum:"Atypical organisms (Mycoplasma, Chlamydia, Legionella), Haemophilus, Moraxella. Pneumococcal resistance is common in the U.S.",
+   uses:"Community-acquired pneumonia in combination with a beta-lactam, chlamydia, pertussis.",
+   oral:"Moderate oral absorption, with long tissue persistence.",
+   reach:"High tissue and white-cell concentrations; low blood levels.",
+   notes:["Avoid as monotherapy for pneumonia where pneumococcal macrolide resistance is high.","QT prolongation; check other QT-prolonging drugs.","Short courses (3–5 days) are usual in pneumonia combination therapy."],
+   setid:"3ddecd25-dc32-a2af-e063-6294a90a526d", cases:"Case 3"},
+  {id:"clindamycin", name:"Clindamycin", cls:"Lincosamide", route:"Oral or IV",
+   spectrum:"Streptococci, many staphylococci including some MRSA, and anaerobes. No gram-negative aerobic activity.",
+   uses:"Toxin suppression in necrotizing soft-tissue infection, an alternative in true beta-lactam allergy.",
+   oral:"Well absorbed by mouth.",
+   reach:"Good bone and tissue penetration; poor spinal fluid penetration.",
+   notes:["FDA boxed warning for C. difficile infection; among the highest-risk antibiotics.","Streptococcal and staphylococcal resistance is rising; check susceptibility.","Not a routine substitute when a beta-lactam can be used."],
+   setid:"df9a2a41-b132-4f43-8940-b2d773b1369a", cases:"Case 2"}
+];
+const labelUrl = setid => `https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=${setid}`;
+
+/* ---------------- Shared data (db) ---------------- */
+const live = {db:null, isOwner:false, labels:{}, reviews:{}, bank:[], meta:null, ready:false};
+let ACTIVE = CASES.slice();
+const cur = () => state.track==="cme" ? CASES : ACTIVE;
+
+function pickActive(){
+  if(state.answers.some(a=>a!==null)) return; // don't swap cases mid-session
+  const approved = live.bank.filter(c=>c.status==="approved");
+  ACTIVE = CASES.map((base,d)=>{
+    const pool = approved.filter(c=>c.decision===d);
+    return pool.length ? pool[Math.floor(Math.random()*pool.length)] : base;
+  });
+}
+
+async function loadStatic(){
+  // Standalone hosting (e.g. GitHub Pages): read label and case data published beside the page.
+  try{
+    const [l,c] = await Promise.all(["labels.json","cases.json"].map(f=>fetch(f,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)));
+    if(l){ live.labels = l.labels||{}; live.meta = {lastRun:l.lastRun, changes:l.changes||[]}; live.ready = true; }
+    if(c){ live.bank = (c.cases||[]).filter(x=>x.status==="approved"); pickActive(); }
+    if(l||c) render();
+  }catch(e){}
+}
+(async function initLive(){
+  if(!window.claude || !claude.use){ loadStatic(); return; }
+  const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+  live.isOwner = user ? await user.isOwner() : false;
+  if(live.isOwner) $("#mode-review").hidden = false;
+  if(!db){ loadStatic(); return; }
+  live.db = db;
+  const err = () => {};
+  db.collection("labels").onSnapshot(s=>{ live.labels = {}; s.docs.forEach(d=>live.labels[d.id]=d.data()); live.ready=true; if(state.mode==="drugs"||state.mode==="review") render(); }, err);
+  db.collection("reviews").onSnapshot(s=>{ live.reviews = {}; s.docs.forEach(d=>live.reviews[d.id]=d.data()); if(state.mode==="drugs"||state.mode==="review") render(); }, err);
+  db.collection("cases").onSnapshot(s=>{
+    live.bank = s.docs.map(d=>({id:d.id, ...d.data()}));
+    pickActive();
+    if(state.track==="practice" && (state.mode==="review" || (state.mode==="cases" && state.view==="intro"))) render();
+  }, err);
+  db.doc("meta/refresh").onSnapshot(s=>{ live.meta = s.exists ? s.data() : null; if(state.mode==="drugs"||state.mode==="review") render(); }, err);
+})();
+
+function fmtDate(iso){ if(!iso) return "—"; const d = new Date(iso); return isNaN(d) ? esc(iso) : d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); }
+
+function renderDrugs(){
+  const sel = DRUGS.find(d=>d.id===state.drug) || DRUGS[0];
+  const L = live.labels[sel.id], R = live.reviews["drug-"+sel.id];
+  const list = DRUGS.map(d=>{ const l = live.labels[d.id];
+    return `<button class="drugbtn" data-drug="${d.id}" aria-pressed="${d.id===sel.id}"><b>${d.name}</b><span>${d.cls}</span>${l&&l.boxed?`<span class="bw">Boxed warning</span>`:""}</button>`; }).join("");
+  const label = L ? `
+      <dl class="kv"><dt>Label</dt><dd>${esc(L.title)}</dd><dt>Label updated</dt><dd>${esc(L.updated||"—")}</dd><dt>Retrieved</dt><dd>${fmtDate(L.retrievedAt)}</dd></dl>
+      ${L.boxed?`<div class="boxed"><b>Boxed warning.</b> “${esc(L.boxedQuote||"")}…”</div>`:`<p class="hint">No boxed warning on this label.</p>`}
+      ${L.indicationQuote?`<p class="quote">“${esc(L.indicationQuote.replace(/[.:;,]+$/,""))}…”</p>`:""}
+      ${L.warnings&&L.warnings.length?`<details><summary>Warnings and precautions (${L.warnings.length} sections)</summary><ul class="wl">${L.warnings.map(w=>`<li>${esc(w)}</li>`).join("")}</ul></details>`:""}`
+    : `<p class="hint">${live.db||live.ready?"Label data hasn't been retrieved for this drug yet.":"Label details aren't available in this view."} The full official label is always available at the link below.</p>`;
+  $("#stage").innerHTML = `<section class="drugs">
+    <nav class="druglist" aria-label="Antibiotics">${list}</nav>
+    <article class="drugcard">
+      <header class="dhead">
+        <div><div class="eyebrow">${esc(sel.cls)}</div><h2>${sel.name}</h2><p class="hint">${esc(sel.route)} · Appears in: ${esc(sel.cases)}</p></div>
+        <span class="status ${R?"ok":"draft"}">${R?`Physician-reviewed ${fmtDate(R.reviewedAt)}`:"Draft · awaiting physician review"}</span>
+      </header>
+      <dl class="fm">
+        <dt>Spectrum</dt><dd>${esc(sel.spectrum)}</dd>
+        <dt>Main hospital uses</dt><dd>${esc(sel.uses)}</dd>
+        <dt>By mouth</dt><dd>${esc(sel.oral)}</dd>
+        <dt>Where it reaches</dt><dd>${esc(sel.reach)}</dd>
+        <dt>Stewardship notes</dt><dd><ul>${sel.notes.map(n=>`<li>${esc(n)}</li>`).join("")}</ul></dd>
+      </dl>
+      <section class="labelbox" aria-label="Official label">
+        <div class="eyebrow">Official FDA label · DailyMed (National Library of Medicine)</div>
+        ${label}
+        <p><a href="${labelUrl(sel.setid)}" target="_blank" rel="noopener">Open the full prescribing information</a></p>
+        <p class="disclaimer">Retrieved automatically from DailyMed and refreshed weekly. Verify against the current full prescribing information and local guidance before clinical use. Doses are intentionally omitted.</p>
+      </section>
+    </article>
+  </section>`;
+}
+
+/* ---------------- Owner review screen ---------------- */
+function caseTitle(c){ return `${c.who} — ${c.question}`; }
+function renderReview(){
+  if(!live.isOwner){ $("#stage").innerHTML = `<section class="panel"><p>The review screen is available to the module's owner.</p></section>`; return; }
+  const drafts = live.bank.filter(c=>c.status==="draft"), approved = live.bank.filter(c=>c.status==="approved"), retired = live.bank.filter(c=>c.status==="retired");
+  const preview = c => `<div class="qcard">
+      <div class="row" style="justify-content:space-between;align-items:baseline"><span class="chip">${MOMENTS[c.decision]?.s||""}: ${MOMENTS[c.decision]?.t||""}</span><span class="hint">${esc(c.source||"")} · v${c.version||1}</span></div>
+      <b>${esc(caseTitle(c))}</b>
+      ${c.changeNote?`<p class="pending" style="margin:0"><b>Why this draft:</b> ${esc(c.changeNote)}</p>`:""}
+      <p>${esc(c.story)}</p>
+      <ol type="A" style="margin:0;padding-left:22px">${c.opts.map(o=>`<li${o.ok?' class="okline"':""}>${esc(o.t)}${o.ok?" ✓":""}<br><span class="hint">${esc(o.w)}</span></li>`).join("")}</ol>
+      <p class="hint"><b>Teaching point:</b> ${esc(c.pearl)}</p>
+      <p class="ev">Evidence: ${(c.ev||[]).map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${esc(t)}</a>`).join(" · ")||"none listed"}</p>
+      <div class="row">${c.status==="draft"
+        ? `<button class="btn" data-casestatus="${c.id}|approved">Approve and publish to practice track</button><button class="btn ghost" data-casestatus="${c.id}|retired">Reject</button>`
+        : c.status==="approved" ? `<button class="btn ghost" data-casestatus="${c.id}|retired">Retire</button>` : `<button class="btn ghost" data-casestatus="${c.id}|approved">Restore</button>`}</div>
+    </div>`;
+  const changes = (live.meta&&live.meta.changes)||[];
+  $("#stage").innerHTML = `<section class="panel">
+    <div class="eyebrow">Owner review · visible only to you</div>
+    <h2 style="font-size:28px">Review queue</h2>
+    <p class="hint">Approved cases join the practice track's rotation right away. The CME track stays on its released version until its next review with the accredited provider. Text edits to a case are made by Claude on request.</p>
+    <h3 style="font-size:20px">Draft cases (${drafts.length})</h3>
+    <div class="qlist">${drafts.map(preview).join("") || `<p class="hint">No drafts. The yearly case review adds them here.</p>`}</div>
+    <h3 style="font-size:20px">Approved case bank (${approved.length})</h3>
+    <div class="qlist">${approved.map(c=>`<div class="qcard"><div class="row" style="justify-content:space-between;align-items:center;gap:8px"><span><span class="chip">${MOMENTS[c.decision]?.s||""}</span> ${esc(c.who)} · v${c.version||1} · reviewed ${fmtDate(c.reviewedAt)}</span><button class="btn ghost" style="padding:6px 12px;font-size:14px" data-casestatus="${c.id}|retired">Retire</button></div></div>`).join("") || `<p class="hint">The bank is empty; the built-in release cases are in use.</p>`}</div>
+    ${retired.length?`<details><summary>Retired or rejected (${retired.length})</summary><div class="qlist" style="margin-top:10px">${retired.map(preview).join("")}</div></details>`:""}
+    <h3 style="font-size:20px">Antibiotic cards</h3>
+    <div class="qlist">${DRUGS.map(d=>{const r=live.reviews["drug-"+d.id];return `<div class="qcard"><div class="row" style="justify-content:space-between;align-items:center;gap:8px"><span><b>${d.name}</b> · ${r?`reviewed ${fmtDate(r.reviewedAt)}`:"awaiting review"}</span>
+      ${r?`<button class="btn ghost" style="padding:6px 12px;font-size:14px" data-drugreview="${d.id}|clear">Mark for re-review</button>`:`<button class="btn" style="padding:6px 12px;font-size:14px" data-drugreview="${d.id}|ok">Mark reviewed</button>`}
+      <button class="linkbtn" data-drug="${d.id}" data-mode="drugs">View card</button></div></div>`;}).join("")}</div>
+    <h3 style="font-size:20px">Label refresh log</h3>
+    <p class="hint">Last run: ${fmtDate(live.meta&&live.meta.lastRun)}. Next runs weekly.</p>
+    <ul class="wl">${changes.slice(-12).reverse().map(c=>`<li>${fmtDate(c.date)} · ${esc(c.text)}</li>`).join("") || "<li>No changes recorded yet.</li>"}</ul>
+  </section>`;
+}
+
+async function setCaseStatus(id, status){
+  if(!live.db) return;
+  const body = {status}; if(status==="approved") body.reviewedAt = new Date().toISOString();
+  try{ await live.db.doc("cases/"+id).update(body); }catch(e){ alertLine("That change didn't save: "+(e.message||e.code)); }
+}
+async function setDrugReview(id, v){
+  if(!live.db) return;
+  try{ v==="ok" ? await live.db.doc("reviews/drug-"+id).set({reviewedAt:new Date().toISOString()}) : await live.db.doc("reviews/drug-"+id).delete(); }
+  catch(e){ alertLine("That change didn't save: "+(e.message||e.code)); }
+}
+function alertLine(t){ const p = document.createElement("p"); p.className="verdict bad"; p.setAttribute("role","status"); p.textContent=t; $("#stage").prepend(p); }
+
+/* ---------------- CME track ---------------- */
+const CME_STEPS = [
+  {id:"about", t:"About"}, {id:"pretest", t:"Pre-test"}, {id:"cases", t:"Cases"},
+  {id:"explorer", t:"Body map"}, {id:"posttest", t:"Post-test"}, {id:"evaluation", t:"Evaluation"}, {id:"complete", t:"Complete"}
+];
+const PASS = 7; // of 10; final value set by the accredited provider
+
+const OBJECTIVES = [
+  "Distinguish asymptomatic bacteriuria from urinary tract infection in older adults with delirium or falls, and withhold antibiotics when guidelines advise.",
+  "Assess a penicillin allergy label and identify low-risk histories suitable for beta-lactam use or a direct oral challenge.",
+  "Use culture results and a negative MRSA nasal PCR to stop, narrow or switch antibiotics at the 48–72 hour review.",
+  "Choose an antibiotic that reaches the site of infection, and recognize when spread to the kidney or blood requires a change in drug.",
+  "Recognize when failure on appropriate therapy calls for imaging and source control rather than escalation.",
+  "Select evidence-based treatment durations for cellulitis, pneumonia and gram-negative bacteremia."
+];
+
+const TEST = [
+  {s:"A 79-year-old nursing home resident is evaluated after a fall. She has no fever, no urinary symptoms and stable vital signs. A urinalysis is positive for leukocyte esterase and nitrite. What is the best management?",
+   o:["Start oral cephalexin for 7 days","Evaluate other causes of the fall and observe without antibiotics","Start nitrofurantoin and repeat the urinalysis in 3 days","Send a urine culture and start antibiotics while it is pending"], a:1,
+   why:"IDSA recommends against treating asymptomatic bacteriuria in older adults who fall but have no urinary or systemic signs. Look for other causes."},
+  {s:"Which finding best indicates that a urinary infection has reached the kidney?",
+   o:["Dysuria and urgency","Positive nitrite on dipstick","Fever with flank pain or costovertebral angle tenderness","More than 10 white cells per high-power field"], a:2,
+   why:"Fever, flank pain, costovertebral angle tenderness or vomiting point to pyelonephritis. The other findings occur in cystitis too."},
+  {s:"Why is nitrofurantoin inappropriate for pyelonephritis?",
+   o:["E. coli is usually resistant to it","It reaches little drug in kidney tissue or blood","It must be given intravenously","It causes acute kidney injury"], a:1,
+   why:"Nitrofurantoin concentrates in urine but achieves low tissue and serum levels, so it doesn't treat infection in the kidney or bloodstream."},
+  {s:"Which penicillin allergy history is low risk and suitable for a direct oral amoxicillin challenge?",
+   o:["Hives and lip swelling within one hour of amoxicillin last year","Anaphylaxis requiring epinephrine","A blistering rash with mucosal involvement (Stevens-Johnson syndrome)","An itchy rash in childhood more than 10 years ago, with no other symptoms"], a:3,
+   why:"A remote, benign rash is low risk. Recent immediate reactions and anaphylaxis need allergist input. Severe blistering reactions are a contraindication to any challenge."},
+  {s:"A patient admitted with community-acquired pneumonia is on vancomycin and ceftriaxone. The MRSA nasal PCR is negative. What does this support?",
+   o:["Stopping vancomycin, given the test's high negative predictive value","Continuing vancomycin until the sputum culture is final","Switching vancomycin to linezolid","Nothing; the test is only valid for ventilator-associated pneumonia"], a:0,
+   why:"A negative MRSA nasal PCR has a negative predictive value above 95% for MRSA pneumonia and supports stopping anti-MRSA therapy."},
+  {s:"A patient with uncomplicated nonpurulent cellulitis is improving on day 3. What total duration does IDSA recommend?",
+   o:["5 days, extended only if not improved","10 days","14 days","Until all redness has resolved"], a:0,
+   why:"IDSA recommends 5 days for uncomplicated cellulitis, extended if the infection has not improved. Residual redness is not treatment failure."},
+  {s:"For which of these stable patients would a 7-day antibiotic course be inappropriate?",
+   o:["E. coli bacteremia from pyelonephritis, after drainage","Klebsiella bacteremia from cholangitis, after biliary drainage","Staphylococcus aureus bacteremia from an IV catheter","Proteus bacteremia from a urinary source, now afebrile"], a:2,
+   why:"Short courses apply to gram-negative bacteremia with a controlled source. S. aureus bacteremia was excluded from the BALANCE trial and always needs a longer course."},
+  {s:"A patient with pyelonephritis is hypotensive and still febrile after 24 hours of appropriate IV antibiotics. What is the priority?",
+   o:["Escalate to a carbapenem","Add vancomycin","Urgent imaging to look for obstruction or abscess","Wait 48 hours for susceptibility results"], a:2,
+   why:"Sepsis or failure to improve in pyelonephritis calls for imaging. An obstructed or abscessed kidney needs drainage, which no drug can replace."},
+  {s:"Imaging shows an infected kidney obstructed by a ureteral stone. What is required?",
+   o:["Urgent decompression by ureteral stent or nephrostomy","Tamsulosin to help the stone pass","Immediate ureteroscopic stone removal","A second antibiotic for synergy"], a:0,
+   why:"An infected, obstructed kidney is a urologic emergency. Drain first; remove the stone after the infection is treated."},
+  {s:"Which question belongs at the 48–72 hour antibiotic time-out?",
+   o:["Should a second empiric agent be added?","Can therapy be stopped, narrowed or switched to oral, and what is the stop date?","Should a urine culture be repeated to confirm cure?","Should the patient be screened for asymptomatic bacteriuria?"], a:1,
+   why:"The time-out reviews the diagnosis and culture results, then asks whether to stop, narrow or switch to oral, and sets the duration."}
+];
+
+const EVAL_ITEMS = [
+  "The activity met its stated learning objectives.",
+  "The content is relevant to my practice.",
+  "The cases reflected realistic clinical situations.",
+  "The body map helped me understand how the site of infection changes treatment.",
+  "I will change something in my practice as a result of this activity."
+];
+const LIKERT = ["Strongly disagree","Disagree","Neutral","Agree","Strongly agree"];
+
+Object.assign(state, {track:null, cmeStep:0, cmeMax:0, pre:Array(10).fill(null), post:Array(10).fill(null), preDone:false, postDone:false,
+  ev:{l:Array(EVAL_ITEMS.length).fill(null), bias:null, change:""}, evDone:false, doneDate:null});
+
+const testScore = k => state[k].reduce((n,v,i)=>n+(v===TEST[i].a?1:0),0);
+
+function renderLanding(){
+  $("#stage").innerHTML = `<section style="display:flex;flex-direction:column;gap:16px">
+    <p class="lede">Four bedside cases and a five-day body map scenario on hospital antibiotic use. Choose how you want to work through them.</p>
+    <div class="tracks">
+      <button class="track" data-track="practice">
+        <span class="badge">Open access</span>
+        <h2>Practice and refresh</h2>
+        <ul><li>Any order, as often as you like</li><li>Case review and body map explorer</li><li>Instant feedback on every choice</li><li>No tests, no certificate</li></ul>
+        <span class="go">Start practicing →</span>
+      </button>
+      <button class="track" data-track="cme">
+        <span class="badge">Credit pending accreditation</span>
+        <h2>CME track</h2>
+        <ul><li>Structured sequence: pre-test, cases, body map, post-test</li><li>Passing score required on the post-test</li><li>Learner evaluation</li><li>Credit only after approval by an accredited provider</li></ul>
+        <span class="go">Start the CME activity →</span>
+      </button>
+    </div>
+  </section>`;
+}
+
+function renderCmeBar(){
+  $("#cmebar").innerHTML = CME_STEPS.map((s,i)=>`<button class="cs ${i===state.cmeStep?"cur":""} ${i<state.cmeStep||i<state.cmeMax?"done":""}" data-cmego="${i}" ${i<=state.cmeMax?"":"disabled"} ${i===state.cmeStep?'aria-current="step"':""}><span class="n">Step ${i+1}</span><b>${s.t}</b></button>`).join("");
+}
+
+function renderAbout(){
+  $("#stage").innerHTML = `<section class="panel">
+    <div class="eyebrow">CME track · Step 1 · Activity information</div>
+    <h2 style="font-size:clamp(24px,3.4vw,32px)">Antibiotic Time-Out: Stewardship Decisions at the Bedside</h2>
+    <div class="pending"><b>Not yet certified for credit.</b> This activity is being prepared for review by an accredited continuing education provider. Fields marked <span class="ph">pending</span> are completed by that provider. No credit can be claimed until approval is granted.</div>
+    <dl class="fm">
+      <dt>Target audience</dt><dd>Hospital physicians, nurses, pharmacists and physician assistants</dd>
+      <dt>Format</dt><dd>Self-paced online enduring material: pre-test, four interactive cases, a five-stage body map scenario, post-test and evaluation</dd>
+      <dt>Estimated time</dt><dd>About 45 minutes <span class="ph">credit hours pending</span></dd>
+      <dt>Learning objectives</dt><dd>After this activity, participants will be able to:<ol>${OBJECTIVES.map(o=>`<li>${esc(o)}</li>`).join("")}</ol></dd>
+      <dt>Faculty</dt><dd>Rodolfo J. Salas-Auvert, M.D., physician and microbiologist; Emeritus Professor of Microbiology, Universidad del Zulia</dd>
+      <dt>Peer reviewer</dt><dd><span class="ph">pending</span></dd>
+      <dt>Disclosures</dt><dd><span class="ph">pending</span> Financial relationships of all planners, faculty and reviewers with ineligible companies in the past 24 months, and how any were mitigated.</dd>
+      <dt>Commercial support</dt><dd><span class="ph">pending</span></dd>
+      <dt>Accreditation and credit</dt><dd><span class="ph">pending</span> The provider's accreditation and credit designation statements for physicians, nurses and pharmacists.</dd>
+      <dt>Release date</dt><dd><span class="ph">pending</span></dd>
+      <dt>Credit expiration</dt><dd><span class="ph">pending</span></dd>
+      <dt>How to earn credit</dt><dd>Complete every step in order, score at least ${PASS} of 10 on the post-test, and submit the evaluation.</dd>
+      <dt>Requirements</dt><dd>A current web browser on a computer, tablet or phone. No plug-ins needed.</dd>
+    </dl>
+    <button class="btn" data-cmenext>Begin the pre-test</button>
+  </section>`;
+}
+
+function renderTest(kind){
+  const ans = state[kind], done = kind==="pre"?state.preDone:state.postDone, key = kind==="post"&&done;
+  const n = testScore(kind), pass = n>=PASS;
+  const qs = TEST.map((q,i)=>`<div class="qcard"><fieldset class="q"><legend>${i+1}. ${esc(q.s)}</legend>
+    ${q.o.map((o,j)=>`<label class="choice ${key?(j===q.a?"correct":ans[i]===j?"incorrect":""):""}"><input type="radio" id="${kind}-${i}-${j}" name="${kind}-${i}" value="${j}" ${ans[i]===j?"checked":""} ${done?"disabled":""}><span>${esc(o)}</span></label>`).join("")}
+    </fieldset>${key?`<p class="why">${esc(q.why)}</p>`:""}</div>`).join("");
+  let head, foot;
+  if(kind==="pre"){
+    head = `<div class="eyebrow">CME track · Step 2 · Pre-test</div><h2 style="font-size:28px">What do you know before the cases?</h2>
+      <p class="lede" style="font-size:16px">Ten questions. The pre-test isn't graded; it measures what changes by the end of the activity. Correct answers appear after the post-test.</p>`;
+    foot = done ? `<p class="verdict" role="status">Pre-test recorded: ${n} of 10.</p><button class="btn" data-cmenext>Continue to the cases</button>`
+                : `<button class="btn" data-submittest="pre" ${ans.includes(null)?"disabled":""}>Submit pre-test</button>`;
+  } else {
+    head = `<div class="eyebrow">CME track · Step 5 · Post-test</div><h2 style="font-size:28px">Post-test</h2>
+      <p class="lede" style="font-size:16px">Ten questions. Passing score: ${PASS} of 10. You may retake it after reviewing the answers.</p>`;
+    foot = done ? `<p class="verdict ${pass?"good":"bad"}" role="status">${n} of 10. ${pass?"Passed.":"Below the passing score of "+PASS+"."} Pre-test score was ${testScore("pre")} of 10.</p>
+        ${pass?`<button class="btn" data-cmenext>Continue to the evaluation</button>`:`<button class="btn" data-retake>Retake the post-test</button>`}`
+      : `<button class="btn" data-submittest="post" ${ans.includes(null)?"disabled":""}>Submit post-test</button>`;
+  }
+  $("#stage").innerHTML = `<section class="panel">${head}<div class="qlist">${qs}</div><div class="row" style="align-items:center">${foot}</div></section>`;
+}
+
+function renderEval(){
+  const e = state.ev, ready = !e.l.includes(null) && e.bias!==null;
+  $("#stage").innerHTML = `<section class="panel">
+    <div class="eyebrow">CME track · Step 6 · Evaluation</div>
+    <h2 style="font-size:28px">Tell us how the activity worked for you</h2>
+    <div class="qlist">
+      ${EVAL_ITEMS.map((t,i)=>`<div class="qcard"><fieldset class="q"><legend>${esc(t)}</legend><div class="lk">
+        ${LIKERT.map((l,j)=>`<label><input type="radio" id="ev-${i}-${j}" name="ev-${i}" value="${j}" ${e.l[i]===j?"checked":""} ${state.evDone?"disabled":""}>${l}</label>`).join("")}
+      </div></fieldset></div>`).join("")}
+      <div class="qcard"><fieldset class="q"><legend>Was the content free of commercial bias?</legend><div class="lk">
+        ${["Yes","No"].map((l,j)=>`<label><input type="radio" id="bias-${j}" name="bias" value="${j}" ${e.bias===j?"checked":""} ${state.evDone?"disabled":""}>${l}</label>`).join("")}
+      </div></fieldset></div>
+      <div class="qcard"><label for="change" style="font-weight:700">What will you do differently in practice? (optional)</label>
+        <textarea id="change" ${state.evDone?"disabled":""} placeholder="For example: review MRSA nasal PCR results at the 48-hour time-out.">${esc(e.change)}</textarea></div>
+    </div>
+    <p class="hint">In the certified version, the provider's learning system records these responses. In this preview they stay in your browser tab and are not sent anywhere.</p>
+    <div class="row"><button class="btn" data-submiteval ${ready&&!state.evDone?"":"disabled"}>Submit evaluation</button></div>
+  </section>`;
+}
+
+function renderComplete(){
+  const pre = testScore("pre"), post = testScore("post");
+  $("#stage").innerHTML = `<section class="panel">
+    <div class="eyebrow">CME track · Step 7 · Activity complete</div>
+    <h2 style="font-size:clamp(24px,3.4vw,32px)">You completed every step of the activity.</h2>
+    <dl class="tally">
+      <dt>Pre-test</dt><dd>${pre} / 10</dd>
+      <dt>Post-test</dt><dd>${post} / 10 · passed</dd>
+      <dt>Change</dt><dd>${post-pre>=0?"+":""}${post-pre} questions</dd>
+      <dt>Cases</dt><dd>${correctCount()} / 4 best calls</dd>
+      <dt>Body map</dt><dd>${exScore()} / ${SCEN.stages.length} best calls</dd>
+      <dt>Evaluation</dt><dd>Submitted</dd>
+      <dt>Completed</dt><dd>${state.doneDate}</dd>
+    </dl>
+    <div class="pending"><b>No credit has been awarded.</b> This activity is pending approval by an accredited continuing education provider. Once approved, completion is recorded and the certificate is issued through the provider's learning system.</div>
+    <div class="row"><button class="btn ghost" data-track="practice">Keep practicing</button><button class="btn ghost" data-cmerestart>Restart the CME activity</button></div>
+  </section>`;
+}
+
+/* ---------------- Rendering and events ---------------- */
+function render(){
+  const t = state.track;
+  $("#modes").hidden = t!=="practice";
+  $("#cmebar").hidden = t!=="cme";
+  $("#changetrack").hidden = !t;
+  if(!t){ $("#rail").hidden = true; $("#score").innerHTML = ""; renderLanding(); return; }
+
+  if(t==="cme"){
+    renderCmeBar();
+    const step = CME_STEPS[state.cmeStep].id;
+    $("#rail").hidden = step!=="cases";
+    if(step==="cases"){ if(state.view==="intro") state.view = 0; renderRail(); state.view==="summary" ? renderSummary() : renderCase(state.view); return; }
+    if(step==="explorer"){ $("#score").innerHTML = `Body map <b>${exScore()}</b> / ${SCEN.stages.length}`; renderExplorer(); return; }
+    $("#score").innerHTML = "CME track";
+    ({about:renderAbout, pretest:()=>renderTest("pre"), posttest:()=>renderTest("post"), evaluation:renderEval, complete:renderComplete})[step]();
+    return;
+  }
+
+  const isEx = state.mode==="explorer";
+  ["cases","explorer","drugs","review"].forEach(m=>$("#mode-"+m).setAttribute("aria-pressed", String(state.mode===m)));
+  $("#rail").hidden = state.mode!=="cases";
+  if(state.mode==="drugs"){ $("#score").innerHTML = "Reference"; renderDrugs(); return; }
+  if(state.mode==="review"){ $("#score").innerHTML = "Owner review"; renderReview(); return; }
+  if(isEx){ $("#score").innerHTML = `Explorer <b>${exScore()}</b> / ${SCEN.stages.length}`; renderExplorer(); return; }
+  renderRail();
+  if(state.view==="intro") renderIntro();
+  else if(state.view==="summary") renderSummary();
+  else renderCase(state.view);
+}
+
+function setHash(h){ try{ history.replaceState(null,"", h ? "#"+h : location.pathname+location.search); }catch(e){} }
+function toTop(){ window.scrollTo({top:0,behavior:"smooth"}); }
+function setMode(m){ state.mode = m; setHash({explorer:"explorer",drugs:"reference",review:"review"}[m]||"practice"); render(); toTop(); }
+function setTrack(t){
+  state.track = t || null;
+  if(t==="practice"){ state.mode = state.mode||"cases"; setHash(state.mode==="explorer"?"explorer":"practice"); }
+  else if(t==="cme"){ setHash("cme"); }
+  else setHash("");
+  render(); toTop();
+}
+function resetAll(){
+  state.answers = [null,null,null,null]; state.view = "intro";
+  ex.stage = 0; ex.answers.fill(null); ex.sel = "bladder";
+}
+function cmeGo(i){
+  state.cmeStep = i; state.cmeMax = Math.max(state.cmeMax, i);
+  const id = CME_STEPS[i].id;
+  if(id==="cases" && (state.view==="intro")) state.view = 0;
+  if(id==="complete" && !state.doneDate) state.doneDate = new Date().toLocaleDateString(undefined,{year:"numeric",month:"long",day:"numeric"});
+  render(); toTop();
+}
+
+document.addEventListener("change",e=>{
+  const el = e.target; if(!el.name) return;
+  let m;
+  if((m = el.name.match(/^(pre|post)-(\d+)$/))){
+    state[m[1]][+m[2]] = +el.value;
+    const b = document.querySelector(`[data-submittest="${m[1]}"]`); if(b) b.disabled = state[m[1]].includes(null);
+  } else if((m = el.name.match(/^ev-(\d+)$/))){ state.ev.l[+m[1]] = +el.value; }
+  else if(el.name==="bias"){ state.ev.bias = +el.value; }
+  const sb = document.querySelector("[data-submiteval]");
+  if(sb) sb.disabled = state.ev.l.includes(null) || state.ev.bias===null;
+});
+document.addEventListener("input",e=>{ if(e.target.id==="change") state.ev.change = e.target.value; });
+
+document.addEventListener("click",e=>{
+  const tr = e.target.closest("[data-track]");
+  if(tr){ if(tr.dataset.track==="practice" && state.track==="cme") resetAll(); setTrack(tr.dataset.track); return; }
+  if(e.target.closest("[data-cmenext]")){ cmeGo(state.cmeStep+1); return; }
+  const cg = e.target.closest("[data-cmego]"); if(cg){ cmeGo(+cg.dataset.cmego); return; }
+  const st = e.target.closest("[data-submittest]");
+  if(st){ const k = st.dataset.submittest; if(state[k].includes(null)) return; if(k==="pre") state.preDone = true; else state.postDone = true; render(); toTop(); return; }
+  if(e.target.closest("[data-retake]")){ state.post.fill(null); state.postDone = false; render(); toTop(); return; }
+  if(e.target.closest("[data-submiteval]")){ state.evDone = true; cmeGo(state.cmeStep+1); return; }
+  if(e.target.closest("[data-cmerestart]")){
+    resetAll(); Object.assign(state,{cmeStep:0,cmeMax:0,preDone:false,postDone:false,evDone:false,doneDate:null});
+    state.pre.fill(null); state.post.fill(null); state.ev = {l:Array(EVAL_ITEMS.length).fill(null),bias:null,change:""};
+    render(); toTop(); return;
+  }
+
+  const dr = e.target.closest("[data-drug]");
+  if(dr){ state.drug = dr.dataset.drug; if(!dr.dataset.mode){ render(); return; } }
+  const cs = e.target.closest("[data-casestatus]");
+  if(cs){ const [id,st] = cs.dataset.casestatus.split("|"); setCaseStatus(id, st); return; }
+  const rv = e.target.closest("[data-drugreview]");
+  if(rv){ const [id,v] = rv.dataset.drugreview.split("|"); setDrugReview(id, v); return; }
+  const mode = e.target.closest("[data-mode]");
+  if(mode){ setMode(mode.dataset.mode); return; }
+  const comp = e.target.closest("[data-comp]");
+  if(comp){ ex.sel = comp.dataset.comp; render(); const el=document.querySelector(`[data-comp="${ex.sel}"]`); if(el) el.focus({preventScroll:true}); return; }
+  const xp = e.target.closest("[data-expick]");
+  if(xp && ex.stage<SCEN.stages.length && ex.answers[ex.stage]===null){ ex.answers[ex.stage] = +xp.dataset.expick; render(); return; }
+  if(e.target.closest("[data-exnext]")){
+    ex.stage++; ex.sel = ex.stage<SCEN.stages.length ? SCEN.stages[ex.stage].sel : "kidneyR";
+    render(); toTop(); return;
+  }
+  if(e.target.closest("[data-exreset]")){ ex.stage=0; ex.answers.fill(null); ex.sel="bladder"; render(); window.scrollTo(0,0); return; }
+
+  const go = e.target.closest("[data-go]");
+  const pick = e.target.closest("[data-pick]");
+  if(pick && typeof state.view==="number" && state.answers[state.view]===null){
+    state.answers[state.view] = +pick.dataset.pick; render(); return;
+  }
+  if(e.target.closest("[data-reset]")){ state.answers=[null,null,null,null]; state.view="intro"; render(); window.scrollTo(0,0); return; }
+  if(go){ const v = go.dataset.go; state.view = v==="summary" ? "summary" : +v; render(); toTop(); }
+});
+document.addEventListener("keydown",e=>{
+  const comp = e.target.closest && e.target.closest("[data-comp]");
+  if(comp && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); comp.dispatchEvent(new MouseEvent("click",{bubbles:true})); }
+});
+function fromHash(){
+  const h = location.hash;
+  if(h==="#explorer"){ state.track="practice"; state.mode="explorer"; }
+  else if(h==="#reference"){ state.track="practice"; state.mode="drugs"; }
+  else if(h==="#review"){ state.track="practice"; state.mode="review"; }
+  else if(h==="#practice"||h==="#cases"){ state.track="practice"; state.mode="cases"; }
+  else if(h==="#cme"){ state.track="cme"; }
+  else state.track = null;
+  render();
+}
+window.addEventListener("hashchange", fromHash);
+fromHash();
+</script>
+
+</body>
+</html>

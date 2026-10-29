@@ -1,0 +1,170 @@
+{
+ "lastRun": "2026-10-29T16:10:00Z",
+ "changes": [
+  {
+   "date": "2026-10-29T16:10:00Z",
+   "text": "Initial retrieval of 8 DailyMed labels."
+  }
+ ],
+ "labels": {
+  "nitrofurantoin": {
+   "title": "MACROBID- nitrofurantoin monohydrate/macrocrystalline capsule",
+   "setid": "8f270a9f-12a1-44d4-bc7e-873613555801",
+   "updated": "October 14, 2025",
+   "boxed": false,
+   "indicationQuote": "Macrobid is indicated only for the treatment of acute uncomplicated urinary tract infections",
+   "warnings": [
+    "Pulmonary reactions",
+    "Hepatotoxicity",
+    "Neuropathy",
+    "Hemolytic anemia",
+    "Clostridium difficile-associated diarrhea"
+   ],
+   "source": "DailyMed",
+   "retrievedAt": "2026-10-29T16:10:00Z"
+  },
+  "ceftriaxone": {
+   "title": "CEFTRIAXONE- ceftriaxone sodium injection, powder, for solution",
+   "setid": "5cd2d96f-83e5-4326-ae87-d0ede4ba493a",
+   "updated": "January 15, 2023",
+   "boxed": false,
+   "indicationQuote": "To reduce the development of drug-resistant bacteria and maintain the effectiveness of Ceftriaxone for Injection",
+   "warnings": [
+    "5.1 Hypersensitivity Reactions to Ceftriaxone, Cephalosporins, Penicillins or Other Drugs",
+    "5.2 Interaction with Calcium-Containing Products",
+    "5.3 Neurological Adverse Reactions",
+    "5.4 Clostridium difficile-associated Diarrhea",
+    "5.5 Hemolytic Anemia",
+    "5.6 Gallbladder Sonogram Abnormalities",
+    "5.7 Patients with Hepatic and Renal Impairment",
+    "5.8 Pancreatitis",
+    "5.9 Development of Drug-Resistant Bacteria",
+    "5.10 Alterations in Prothrombin Time"
+   ],
+   "source": "DailyMed",
+   "retrievedAt": "2026-10-29T16:10:00Z"
+  },
+  "cefazolin": {
+   "title": "CEFAZOLIN- cefazolin injection, powder, for solution",
+   "setid": "1367568c-7d27-479f-a4c5-58e99942f686",
+   "updated": "Revised 11/2025",
+   "boxed": false,
+   "indicationQuote": "Cefazolin for Injection is a cephalosporin antibacterial indicated for:",
+   "warnings": [
+    "5.1 Hypersensitivity Reactions to Cefazolin, Cephalosporins, Penicillins, or Other Beta-lactams",
+    "5.2 Seizures in Patients with Renal Impairment",
+    "5.3 Clostridioides difficile-Associated Diarrhea",
+    "5.4 Risk of Development of Drug-resistant Bacteria",
+    "5.5 Prothrombin Activity",
+    "5.6 Drug/Laboratory Test Interactions"
+   ],
+   "source": "DailyMed",
+   "retrievedAt": "2026-10-29T16:10:00Z"
+  },
+  "cephalexin": {
+   "title": "KEFLEX- cephalexin capsule",
+   "setid": "33ad783f-b633-6a70-e054-00144ff8d46c",
+   "updated": "May 25, 2016",
+   "boxed": false,
+   "indicationQuote": "Cephalexin capsules are indicated for the treatment of respiratory tract infections",
+   "warnings": [
+    "5.1 Hypersensitivity Reactions",
+    "5.2 Clostridium difficile-Associated Diarrhea",
+    "5.3 Direct Coombs' Test Seroconversion",
+    "5.4 Seizure Potential",
+    "5.5 Prolonged Prothrombin Time",
+    "5.6 Development of Drug-Resistant Bacteria"
+   ],
+   "source": "DailyMed",
+   "retrievedAt": "2026-10-29T16:10:00Z"
+  },
+  "ciprofloxacin": {
+   "title": "CIPRO- ciprofloxacin hydrochloride tablet, film coated",
+   "setid": "888dc7f9-ad9c-4c00-8d50-8ddfd9bd27c0",
+   "updated": "March 2, 2026",
+   "boxed": true,
+   "boxedQuote": "Fluoroquinolones, including CIPRO®, have been associated with disabling and potentially irreversible serious",
+   "indicationQuote": "CIPRO is a fluoroquinolone antibacterial indicated in adults (18 years of age and older) with the following infections",
+   "warnings": [
+    "5.1 Disabling and Potentially Irreversible Serious Adverse Reactions Including Tendinitis and Tendon Rupture, Peripheral Neuropathy, and Central Nervous System Effects",
+    "5.2 Tendinitis and Tendon Rupture",
+    "5.3 Peripheral Neuropathy",
+    "5.4 Central Nervous System Effects",
+    "5.5 Exacerbation of Myasthenia Gravis",
+    "5.6 Other Serious and Sometimes Fatal Adverse Reactions",
+    "5.7 Hypersensitivity Reactions",
+    "5.8 Hepatotoxicity",
+    "5.9 Risk of Aortic Aneurysm and Dissection",
+    "5.10 Serious Adverse Reactions with Concomitant Theophylline",
+    "5.11 Clostridioides difficile-Associated Diarrhea",
+    "5.12 Prolongation of the QT Interval",
+    "5.13 Musculoskeletal Disorders in Pediatric Patients and Arthropathic Effects in Animals",
+    "5.14 Photosensitivity/Phototoxicity",
+    "5.15 Development of Drug Resistant Bacteria",
+    "5.16 Potential Risks with Concomitant Use of Drugs Metabolized by Cytochrome P450 1A2 Enzymes",
+    "5.17 Interference with Timely Diagnosis of Syphilis",
+    "5.18 Crystalluria",
+    "5.19 Blood Glucose Disturbances"
+   ],
+   "source": "DailyMed",
+   "retrievedAt": "2026-10-29T16:10:00Z"
+  },
+  "vancomycin": {
+   "title": "VANCOMYCIN HYDROCHLORIDE injection, powder, for solution",
+   "setid": "e4ce7b87-fab4-4b7a-b121-eba136c464ce",
+   "updated": "August 7, 2024",
+   "boxed": false,
+   "indicationQuote": "Vancomycin Hydrochloride for Injection is a glycopeptide antibacterial indicated in adult and pediatric patients",
+   "warnings": [
+    "5.1 Nephrotoxicity",
+    "5.2 Ototoxicity",
+    "5.3 Severe Dermatologic Reactions",
+    "5.4 Neutropenia",
+    "5.5 Infusion Reactions",
+    "5.6 Phlebitis and Adverse Reactions with Unapproved Routes of Administration",
+    "5.7 Clostridioides difficile-Associated Diarrhea (CDAD)",
+    "5.8 Hemorrhagic Occlusive Retinal Vasculitis (HORV)",
+    "5.9 Development of Drug-Resistant Bacteria",
+    "5.10 Potential for Systemic Absorption after Oral Administration"
+   ],
+   "source": "DailyMed",
+   "retrievedAt": "2026-10-29T16:10:00Z"
+  },
+  "azithromycin": {
+   "title": "ZITHROMAX- azithromycin dihydrate tablet, film coated",
+   "setid": "3ddecd25-dc32-a2af-e063-6294a90a526d",
+   "updated": "September 3, 2025",
+   "boxed": false,
+   "indicationQuote": "ZITHROMAX (azithromycin) is a macrolide antibacterial drug indicated for the treatment of patients",
+   "warnings": [
+    "5.1 Hypersensitivity",
+    "5.2 Hepatotoxicity",
+    "5.3 Infantile Hypertrophic Pyloric Stenosis (IHPS)",
+    "5.4 QT Prolongation",
+    "5.5 Cardiovascular Death",
+    "5.6 Clostridioides difficile-Associated Diarrhea (CDAD)",
+    "5.7 Exacerbation of Myasthenia Gravis",
+    "5.8 Use in Sexually Transmitted Infections",
+    "5.9 Development of Drug-Resistant Bacteria"
+   ],
+   "source": "DailyMed",
+   "retrievedAt": "2026-10-29T16:10:00Z"
+  },
+  "clindamycin": {
+   "title": "CLEOCIN HYDROCHLORIDE- clindamycin hydrochloride capsule",
+   "setid": "df9a2a41-b132-4f43-8940-b2d773b1369a",
+   "updated": "September 16, 2026",
+   "boxed": true,
+   "boxedQuote": "Clostridioides difficile infection (CDI) has been reported with use of nearly all antibacterial agents",
+   "indicationQuote": "Clindamycin is indicated in the treatment of serious infections caused by susceptible anaerobic bacteria.",
+   "warnings": [
+    "Clostridioides difficile Infection",
+    "Anaphylactic and Severe Hypersensitivity Reactions",
+    "Nephrotoxicity",
+    "Usage in Meningitis"
+   ],
+   "source": "DailyMed",
+   "retrievedAt": "2026-10-29T16:10:00Z"
+  }
+ }
+}
